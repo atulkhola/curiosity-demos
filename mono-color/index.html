@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mono-color — CITY PEDAL</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; background: #0a0a0b; color: #e8eaed; display: grid; place-items: center; padding: 1.25rem; }
+    .wrap { width: min(960px, 100%); display: grid; gap: 1rem; }
+    h1 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+    p { margin: 0; opacity: 0.7; font-size: 0.85rem; line-height: 1.45; }
+    a { color: #8ab4ff; }
+    figure { margin: 0; border-radius: 14px; overflow: hidden; border: 1px solid #2a3038; background: #12141a; }
+    img { display: block; width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a href="../">← Curiosity demos</a></p>
+    <h1>Mono-color — CITY PEDAL</h1>
+    <p>Poster still from the mono-color CITY PEDAL concept.</p>
+    <figure><img id="poster" alt="CITY PEDAL mono-color poster" /></figure>
+  </div>
+<script src="./part0.js"></script>
+<script src="./part1.js"></script>
+<script src="./part2.js"></script>
+<script src="./part3.js"></script>
+<script src="./part4.js"></script>
+  <script>
+    document.getElementById('poster').src = 'data:image/jpeg;base64,' + (window.CITY_PEDAL_B64_PARTS||[]).join('');
+  </script>
+</body>
+</html>
