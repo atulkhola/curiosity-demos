@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Grok Bot Guides — fleet map</title>
+  <meta name="theme-color" content="#0b0d10" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --card: #151a21;
+      --line: #2a3038;
+      --text: #e8eaed;
+      --muted: #9aa3ad;
+      --accent: #3d7eff;
+      --accent-soft: rgba(61,126,255,.14);
+      --ok: #3dd68c;
+      --gap: #f5a524;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      padding: 1.5rem 1rem 3rem;
+    }
+    .wrap { width: min(920px, 100%); margin: 0 auto; }
+    header h1 {
+      font-size: 1.35rem; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 .35rem;
+    }
+    .lede { margin: 0 0 1.1rem; color: var(--muted); font-size: .92rem; line-height: 1.45; }
+    .lede a { color: #8ab4ff; }
+    .chips {
+      display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1.15rem;
+    }
+    .chip {
+      appearance: none; border: 1px solid var(--line); background: #12161c;
+      color: var(--text); border-radius: 999px; padding: .4rem .75rem;
+      font-size: .78rem; cursor: pointer;
+    }
+    .chip[aria-pressed="true"] {
+      border-color: var(--accent); background: var(--accent-soft); color: #cfe0ff;
+    }
+    .grid {
+      display: grid; gap: .75rem;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+    .card {
+      display: flex; flex-direction: column; gap: .45rem;
+      padding: 1rem 1.05rem; border-radius: 14px;
+      background: var(--card); border: 1px solid var(--line);
+      text-decoration: none; color: inherit;
+      transition: border-color .15s, background .15s, transform .15s;
+      min-height: 148px;
+    }
+    a.card:hover, a.card:focus-visible {
+      border-color: var(--accent); background: #1a222c; outline: none;
+      transform: translateY(-1px);
+    }
+    .tag {
+      font-size: .68rem; letter-spacing: .04em; text-transform: uppercase;
+      color: #8ab4ff; font-weight: 600;
+    }
+    .card h2 { font-size: .98rem; margin: 0; font-weight: 600; }
+    .card p { margin: 0; font-size: .8rem; color: var(--muted); line-height: 1.4; flex: 1; }
+    .map {
+      margin-top: 1.6rem; padding: 1rem 1.1rem; border-radius: 14px;
+      background: #12161c; border: 1px solid var(--line);
+    }
+    .map h3 { margin: 0 0 .65rem; font-size: .95rem; }
+    .row {
+      display: grid; grid-template-columns: 7.5rem 1fr auto; gap: .6rem;
+      align-items: start; padding: .55rem 0; border-top: 1px solid #1f252d;
+      font-size: .82rem;
+    }
+    .row:first-of-type { border-top: 0; }
+    .bot { font-weight: 600; }
+    .role { color: var(--muted); line-height: 1.35; }
+    .badge {
+      font-size: .68rem; font-weight: 650; letter-spacing: .03em;
+      text-transform: uppercase; border-radius: 999px; padding: .25rem .55rem;
+      white-space: nowrap;
+    }
+    .badge.ok { background: rgba(61,214,140,.12); color: var(--ok); }
+    .badge.gap { background: rgba(245,165,36,.12); color: var(--gap); }
+    .pattern {
+      margin-top: 1rem; padding: .9rem 1rem; border-radius: 12px;
+      background: var(--accent-soft); border: 1px solid rgba(61,126,255,.28);
+      font-size: .82rem; line-height: 1.45;
+    }
+    .pattern strong { color: #cfe0ff; }
+    .iters {
+      margin-top: 1.4rem;
+    }
+    .iters h3 { font-size: .95rem; margin: 0 0 .55rem; }
+    .iters ol {
+      margin: 0; padding-left: 1.15rem; color: var(--muted);
+      font-size: .84rem; line-height: 1.5;
+    }
+    .iters li { margin-bottom: .35rem; }
+    .src {
+      margin-top: 1.5rem; font-size: .75rem; color: var(--muted);
+    }
+    .src a { color: #8ab4ff; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Grok Bot Guides — fleet map</h1>
+      <p class="lede">
+        First-pass map of the new
+        <a href="https://x.ai/bot/guides" rel="noopener">x.ai/bot/guides</a>
+        collection against Atul’s live bots. Filter by role, open a guide, spot gaps.
+      </p>
+    </header>
+
+    <div class="chips" role="toolbar" aria-label="Filter by role">
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
+      <button class="chip" type="button" data-filter="getting-started" aria-pressed="false">Getting started</button>
+      <button class="chip" type="button" data-filter="engineering" aria-pressed="false">Engineering</button>
+      <button class="chip" type="button" data-filter="design" aria-pressed="false">Design</button>
+      <button class="chip" type="button" data-filter="gtm" aria-pressed="false">GTM</button>
+      <button class="chip" type="button" data-filter="product" aria-pressed="false">Product</button>
+      <button class="chip" type="button" data-filter="support" aria-pressed="false">Support</button>
+      <button class="chip" type="button" data-filter="teams" aria-pressed="false">Multi-team</button>
+    </div>
+
+    <div class="grid" id="guides"></div>
+
+    <section class="map" aria-label="Atul fleet map">
+      <h3>Atul’s fleet vs guide patterns</h3>
+      <div class="row">
+        <div class="bot">Curiosity</div>
+        <div class="role">AI curiosity loop — X bookmarks → reverse-engineer → demo. Closest to Engineering + Design always-on agents.</div>
+        <span class="badge ok">covered</span>
+      </div>
+      <div class="row">
+        <div class="bot">Atul CoS</div>
+        <div class="role">Day-to-day ops / Chief of Staff. Maps to GTM CoS + multi-team PM/ops patterns.</div>
+        <span class="badge ok">covered</span>
+      </div>
+      <div class="row">
+        <div class="bot">Pixel</div>
+        <div class="role">@pixelandpump posting lane (Curiosity stays off that identity). Content/GTM specialist.</div>
+        <span class="badge ok">covered</span>
+      </div>
+      <div class="row">
+        <div class="bot">Support bot</div>
+        <div class="role">Queue + connectors + routines for inbound support. No dedicated bot yet.</div>
+        <span class="badge gap">gap</span>
+      </div>
+      <div class="row">
+        <div class="bot">PM bot</div>
+        <div class="role">Attention lists + shipping board. Partial via CoS; no dedicated PM roster.</div>
+        <span class="badge gap">gap</span>
+      </div>
+      <div class="pattern">
+        <strong>Multi-team pattern (from the guides):</strong>
+        one project = one channel + roster (≤6 bots) + Notion Projects/Tasks board.
+        Reuse bots first; create new ones only after you say yes.
+      </div>
+    </section>
+
+    <section class="iters">
+      <h3>Iteration ideas</h3>
+      <ol>
+        <li>Wire this map to live agent roster via export so gaps update automatically.</li>
+        <li>One-click “spin Support bot from template” using Templates for Grok Bot.</li>
+        <li>Project Ops skill: create channel + Notion row + staff roster from a brief.</li>
+        <li>Side-by-side: Curiosity bookmark pipeline vs Engineering cloud-agent feedback loop.</li>
+        <li>Design guide mode: always-on design bot that only touches production assets you allowlist.</li>
+      </ol>
+    </section>
+
+    <p class="src">
+      Source bookmark:
+      <a href="https://x.com/benln/status/2099849826120683967" rel="noopener">@benln · New Grok Bot guides</a>
+      · Curiosity first pass
+    </p>
+  </div>
+
+  <script>
+    const GUIDES = [
+      {
+        id: "101",
+        tag: "Getting started",
+        filter: "getting-started",
+        title: "Grok Bot 101",
+        blurb: "Stand one up, chain specialists, run recurring workflows.",
+        href: "https://x.ai/bot/guides/grok-bot-101"
+      },
+      {
+        id: "eng",
+        tag: "Engineering",
+        filter: "engineering",
+        title: "Grok Bot for Engineering",
+        blurb: "Fleets of engineering bots, cloud agents, feedback loops.",
+        href: "https://x.ai/bot/guides/grok-bot-for-engineering"
+      },
+      {
+        id: "support",
+        tag: "Support",
+        filter: "support",
+        title: "Grok Bot for Support",
+        blurb: "Queues, connectors, routines, and automation for support.",
+        href: "https://x.ai/bot/guides/grok-bot-for-support"
+      },
+      {
+        id: "templates",
+        tag: "Getting started",
+        filter: "getting-started",
+        title: "Templates for Grok Bot",
+        blurb: "Package and share reusable bot templates.",
+        href: "https://x.ai/bot/guides/templates-for-grok-bot"
+      },
+      {
+        id: "teams",
+        tag: "Multi-team",
+        filter: "teams",
+        title: "Multiple teams of Grok Bots",
+        blurb: "Channel + roster + Notion board per project.",
+        href: "https://x.ai/bot/guides/how-i-run-multiple-teams-of-grok-bots"
+      },
+      {
+        id: "mobile",
+        tag: "Engineering",
+        filter: "engineering",
+        title: "Mobile app development",
+        blurb: "Six bots as a mobile game studio (Rank’em).",
+        href: "https://x.ai/bot/guides/grok-bot-for-mobile-app-development"
+      },
+      {
+        id: "design",
+        tag: "Design",
+        filter: "design",
+        title: "Designing Grok Bot with Grok Bot",
+        blurb: "Always-on design agents with real production assets.",
+        href: "https://x.ai/bot/guides/designing-grok-bot-with-grok-bot"
+      },
+      {
+        id: "gtm",
+        tag: "GTM",
+        filter: "gtm",
+        title: "Grok Bot for GTM",
+        blurb: "Enterprise GTM: CoS, prospecting, accounts, live slides.",
+        href: "https://x.ai/bot/guides/grok-bot-for-gtm"
+      },
+      {
+        id: "pm",
+        tag: "Product",
+        filter: "product",
+        title: "Grok Bot for PMs",
+        blurb: "Attention lists, shipping software, delegated bot teams.",
+        href: "https://x.ai/bot/guides/grok-bot-for-pms"
+      }
+    ];
+
+    const grid = document.getElementById("guides");
+    let active = "all";
+
+    function render() {
+      const items = GUIDES.filter(g => active === "all" || g.filter === active);
+      grid.innerHTML = items.map(g => `
+        <a class="card" href="${g.href}" rel="noopener" data-filter="${g.filter}">
+          <div class="tag">${g.tag}</div>
+          <h2>${g.title}</h2>
+          <p>${g.blurb}</p>
+        </a>
+      `).join("");
+    }
+
+    document.querySelectorAll(".chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        active = btn.dataset.filter;
+        document.querySelectorAll(".chip").forEach(b => {
+          b.setAttribute("aria-pressed", String(b === btn));
+        });
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>
