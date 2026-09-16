@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aside — Local Dictation HUD</title>
+  <style>
+    :root {
+      --bg: #07080b;
+      --bg-glow: radial-gradient(ellipse 80% 50% at 50% 20%, rgba(72, 120, 255, 0.12), transparent 60%),
+                 radial-gradient(ellipse 60% 40% at 80% 80%, rgba(120, 80, 255, 0.08), transparent 50%);
+      --glass: rgba(255, 255, 255, 0.06);
+      --glass-strong: rgba(255, 255, 255, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --ink: #f0f2f7;
+      --muted: #8b92a5;
+      --accent: #6ea8ff;
+      --accent-glow: rgba(110, 168, 255, 0.35);
+      --green: #3dde8c;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      background-image: var(--bg-glow);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .stage {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.25rem 3rem;
+      position: relative;
+    }
+
+    .top-bar {
+      position: absolute;
+      top: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: min(520px, 100%);
+      animation: fadeUp 0.6s var(--ease) both;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--green);
+    }
+
+    .badge .lock {
+      width: 12px; height: 12px;
+      opacity: 0.9;
+    }
+
+    .mode-toggle {
+      display: inline-flex;
+      padding: 0.25rem;
+      border-radius: 999px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .mode-toggle button {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.45rem 0.95rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.25s var(--ease), color 0.25s var(--ease), box-shadow 0.25s;
+    }
+
+    .mode-toggle button.active {
+      background: var(--glass-strong);
+      color: var(--ink);
+      box-shadow: 0 0 0 1px var(--glass-border), 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .hud {
+      width: min(480px, 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .pills {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    .wave-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.85rem 1.15rem;
+      border-radius: 999px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      width: min(340px, 100%);
+      transition: box-shadow 0.4s var(--ease), border-color 0.4s, transform 0.4s var(--ease);
+      animation: fadeUp 0.7s var(--ease) 0.08s both;
+    }
+
+    .wave-pill.listening {
+      border-color: rgba(110, 168, 255, 0.35);
+      box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.4),
+        0 0 40px var(--accent-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .mic-dot {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #3a7aff, #6ea8ff);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 0 var(--accent-glow);
+      transition: box-shadow 0.3s;
+    }
+
+    .wave-pill.listening .mic-dot {
+      animation: micPulse 1.6s ease-out infinite;
+    }
+
+    .mic-dot svg {
+      width: 16px; height: 16px;
+      fill: #fff;
+    }
+
+    .bars {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 28px;
+      flex: 1;
+    }
+
+    .bars span {
+      display: block;
+      width: 3px;
+      border-radius: 2px;
+      background: var(--accent);
+      height: 20%;
+      opacity: 0.35;
+      transition: height 0.12s ease, opacity 0.2s;
+    }
+
+    .wave-pill.listening .bars span {
+      opacity: 0.9;
+      animation: barWave 0.9s ease-in-out infinite;
+    }
+
+    .wave-pill.listening .bars span:nth-child(1) { animation-delay: 0.00s; }
+    .wave-pill.listening .bars span:nth-child(2) { animation-delay: 0.05s; }
+    .wave-pill.listening .bars span:nth-child(3) { animation-delay: 0.10s; }
+    .wave-pill.listening .bars span:nth-child(4) { animation-delay: 0.15s; }
+    .wave-pill.listening .bars span:nth-child(5) { animation-delay: 0.20s; }
+    .wave-pill.listening .bars span:nth-child(6) { animation-delay: 0.25s; }
+    .wave-pill.listening .bars span:nth-child(7) { animation-delay: 0.12s; }
+    .wave-pill.listening .bars span:nth-child(8) { animation-delay: 0.18s; }
+    .wave-pill.listening .bars span:nth-child(9) { animation-delay: 0.08s; }
+    .wave-pill.listening .bars span:nth-child(10) { animation-delay: 0.22s; }
+    .wave-pill.listening .bars span:nth-child(11) { animation-delay: 0.04s; }
+    .wave-pill.listening .bars span:nth-child(12) { animation-delay: 0.16s; }
+    .wave-pill.listening .bars span:nth-child(13) { animation-delay: 0.28s; }
+    .wave-pill.listening .bars span:nth-child(14) { animation-delay: 0.06s; }
+    .wave-pill.listening .bars span:nth-child(15) { animation-delay: 0.14s; }
+    .wave-pill.listening .bars span:nth-child(16) { animation-delay: 0.20s; }
+    .wave-pill.listening .bars span:nth-child(17) { animation-delay: 0.10s; }
+    .wave-pill.listening .bars span:nth-child(18) { animation-delay: 0.24s; }
+    .wave-pill.listening .bars span:nth-child(19) { animation-delay: 0.02s; }
+    .wave-pill.listening .bars span:nth-child(20) { animation-delay: 0.18s; }
+
+    .status-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      min-width: 4.5rem;
+      text-align: right;
+    }
+
+    .wave-pill.listening .status-label { color: var(--accent); }
+
+    .snippet-pill {
+      padding: 0.65rem 1.1rem;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      font-size: 0.85rem;
+      color: var(--muted);
+      max-width: 300px;
+      text-align: center;
+      line-height: 1.4;
+      animation: fadeUp 0.7s var(--ease) 0.15s both;
+      opacity: 0.85;
+    }
+
+    .transcript-card {
+      width: 100%;
+      border-radius: 20px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(28px) saturate(1.3);
+      -webkit-backdrop-filter: blur(28px) saturate(1.3);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+      padding: 1.35rem 1.4rem 1.2rem;
+      animation: fadeUp 0.7s var(--ease) 0.2s both;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .transcript-card .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.85rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .transcript-card .meta .live-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: var(--green);
+    }
+
+    .transcript-card .meta .live-dot::before {
+      content: "";
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 0 rgba(61, 222, 140, 0.5);
+    }
+
+    body.is-listening .transcript-card .meta .live-dot::before {
+      animation: liveBlink 1.4s ease-out infinite;
+    }
+
+    #transcript {
+      flex: 1;
+      font-size: 1.05rem;
+      line-height: 1.65;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+
+    #transcript .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1.05em;
+      background: var(--accent);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+      opacity: 0;
+    }
+
+    body.is-listening #transcript .cursor { opacity: 1; }
+
+    #transcript .token {
+      opacity: 0;
+      animation: tokenIn 0.25s var(--ease) forwards;
+    }
+
+    .hint-row {
+      margin-top: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 0.7s var(--ease) 0.28s both;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.6rem 1.1rem;
+      border-radius: 12px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: background 0.2s, transform 0.2s var(--ease), border-color 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--glass-strong);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn:active { transform: translateY(0); }
+
+    .btn-primary {
+      background: linear-gradient(145deg, #3a7aff, #5b94ff);
+      border-color: transparent;
+      box-shadow: 0 4px 24px var(--accent-glow);
+    }
+
+    footer.credit {
+      position: absolute;
+      bottom: 1.25rem;
+      left: 0; right: 0;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      opacity: 0.75;
+    }
+
+    footer.credit a {
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    footer.credit a:hover { color: var(--accent); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes barWave {
+      0%, 100% { height: 18%; }
+      50% { height: 95%; }
+    }
+
+    @keyframes micPulse {
+      0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+      70% { box-shadow: 0 0 0 14px rgba(110, 168, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(110, 168, 255, 0); }
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    @keyframes tokenIn {
+      from { opacity: 0; filter: blur(2px); }
+      to { opacity: 1; filter: blur(0); }
+    }
+
+    @keyframes liveBlink {
+      0% { box-shadow: 0 0 0 0 rgba(61, 222, 140, 0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(61, 222, 140, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(61, 222, 140, 0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="top-bar">
+      <span class="badge" title="On-device transcription">
+        <svg class="lock" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-.5V4.5A3.5 3.5 0 0 0 8 1zm2.5 5h-5V4.5a2.5 2.5 0 0 1 5 0V6z"/></svg>
+        100% local
+      </span>
+      <div class="mode-toggle" role="group" aria-label="Listening state">
+        <button type="button" id="btnIdle" class="active">Idle</button>
+        <button type="button" id="btnListen">Listening</button>
+      </div>
+    </div>
+
+    <div class="hud">
+      <div class="pills">
+        <div class="wave-pill" id="wavePill" aria-live="polite">
+          <div class="mic-dot" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+          </div>
+          <div class="bars" id="bars" aria-hidden="true"></div>
+          <span class="status-label" id="statusLabel">Idle</span>
+        </div>
+        <div class="snippet-pill" id="snippetPill">Hold to dictate · nothing leaves this device</div>
+      </div>
+
+      <div class="transcript-card">
+        <div class="meta">
+          <span>Transcript</span>
+          <span class="live-dot" id="liveMeta">Ready</span>
+        </div>
+        <div id="transcript"><span class="placeholder" style="color:var(--muted)">Tap Listening to start a faux stream — or enable mic for Web Speech when available.</span><span class="cursor"></span></div>
+        <div class="hint-row" id="hintRow">Mock mode · Web Speech optional</div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="btnToggle">Start listening</button>
+        <button type="button" class="btn" id="btnClear">Clear</button>
+        <button type="button" class="btn" id="btnSpeech" title="Use browser Web Speech API if available">Try real mic</button>
+      </div>
+    </div>
+
+    <footer class="credit">
+      Inspired by <a href="https://heyaside.com" rel="noopener" target="_blank">Aside</a> /
+      <a href="https://x.com/dominikmartn" rel="noopener" target="_blank">@dominikmartn</a> — not affiliated.
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const barsEl = document.getElementById("bars");
+      for (let i = 0; i < 20; i++) {
+        barsEl.appendChild(document.createElement("span"));
+      }
+
+      const body = document.body;
+      const wavePill = document.getElementById("wavePill");
+      const statusLabel = document.getElementById("statusLabel");
+      const liveMeta = document.getElementById("liveMeta");
+      const transcript = document.getElementById("transcript");
+      const hintRow = document.getElementById("hintRow");
+      const snippetPill = document.getElementById("snippetPill");
+      const btnIdle = document.getElementById("btnIdle");
+      const btnListen = document.getElementById("btnListen");
+      const btnToggle = document.getElementById("btnToggle");
+      const btnClear = document.getElementById("btnClear");
+      const btnSpeech = document.getElementById("btnSpeech");
+
+      const phrases = [
+        "Draft a reply to the investor update,",
+        "keep the tone warm but concise,",
+        "and mention that the local dictation HUD",
+        "stays fully on-device.",
+        "Also queue a summary for tomorrow's standup."
+      ];
+
+      let listening = false;
+      let mockTimer = null;
+      let phraseIdx = 0;
+      let wordIdx = 0;
+      let recognition = null;
+      let usingSpeech = false;
+      let builtText = "";
+
+      function setListening(on) {
+        listening = on;
+        body.classList.toggle("is-listening", on);
+        wavePill.classList.toggle("listening", on);
+        statusLabel.textContent = on ? "Listening" : "Idle";
+        liveMeta.textContent = on ? "Live" : "Ready";
+        btnIdle.classList.toggle("active", !on);
+        btnListen.classList.toggle("active", on);
+        btnToggle.textContent = on ? "Stop listening" : "Start listening";
+        snippetPill.textContent = on
+          ? (usingSpeech ? "Mic open · streaming…" : "Streaming faux tokens…")
+          : "Hold to dictate · nothing leaves this device";
+
+        if (!on) {
+          stopMock();
+          stopSpeech();
+        } else if (!usingSpeech) {
+          startMock();
+        }
+      }
+
+      function clearTranscript(keepPlaceholder) {
+        builtText = "";
+        phraseIdx = 0;
+        wordIdx = 0;
+        if (keepPlaceholder) {
+          transcript.innerHTML =
+            '<span class="placeholder" style="color:var(--muted)">Tap Listening to start a faux stream — or enable mic for Web Speech when available.</span><span class="cursor"></span>';
+        } else {
+          transcript.innerHTML = '<span class="cursor"></span>';
+        }
+      }
+
+      function appendToken(word) {
+        const ph = transcript.querySelector(".placeholder");
+        if (ph) ph.remove();
+        const cursor = transcript.querySelector(".cursor");
+        const span = document.createElement("span");
+        span.className = "token";
+        span.textContent = (builtText ? " " : "") + word;
+        builtText += (builtText ? " " : "") + word;
+        transcript.insertBefore(span, cursor);
+      }
+
+      function startMock() {
+        stopMock();
+        if (!builtText) clearTranscript(false);
+        mockTimer = setInterval(function () {
+          if (!listening || usingSpeech) return;
+          const words = phrases[phraseIdx].split(" ");
+          if (wordIdx >= words.length) {
+            phraseIdx = (phraseIdx + 1) % phrases.length;
+            wordIdx = 0;
+            return;
+          }
+          appendToken(words[wordIdx]);
+          wordIdx++;
+        }, 280);
+      }
+
+      function stopMock() {
+        if (mockTimer) {
+          clearInterval(mockTimer);
+          mockTimer = null;
+        }
+      }
+
+      function getRecognition() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) return null;
+        const r = new SR();
+        r.continuous = true;
+        r.interimResults = true;
+        r.lang = "en-US";
+        r.onresult = function (event) {
+          let interim = "";
+          let finalChunk = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const t = event.results[i][0].transcript;
+            if (event.results[i].isFinal) finalChunk += t;
+            else interim += t;
+          }
+          if (finalChunk) {
+            const words = finalChunk.trim().split(/\s+/);
+            words.forEach(appendToken);
+          }
+          if (interim) {
+            snippetPill.textContent = interim.trim().slice(0, 48) + (interim.length > 48 ? "…" : "");
+          }
+        };
+        r.onerror = function () {
+          hintRow.textContent = "Web Speech error — falling back to mock";
+          usingSpeech = false;
+          if (listening) startMock();
+        };
+        r.onend = function () {
+          if (listening && usingSpeech) {
+            try { r.start(); } catch (e) { /* ignore */ }
+          }
+        };
+        return r;
+      }
+
+      function startSpeech() {
+        stopMock();
+        recognition = recognition || getRecognition();
+        if (!recognition) {
+          hintRow.textContent = "Web Speech not available — using mock stream";
+          usingSpeech = false;
+          startMock();
+          return;
+        }
+        usingSpeech = true;
+        hintRow.textContent = "Web Speech active · still treated as local browser API";
+        if (!builtText) clearTranscript(false);
+        try {
+          recognition.start();
+        } catch (e) {
+          /* already started */
+        }
+      }
+
+      function stopSpeech() {
+        usingSpeech = false;
+        if (recognition) {
+          try { recognition.stop(); } catch (e) { /* ignore */ }
+        }
+      }
+
+      btnIdle.addEventListener("click", function () { setListening(false); });
+      btnListen.addEventListener("click", function () {
+        usingSpeech = false;
+        hintRow.textContent = "Mock mode · Web Speech optional";
+        setListening(true);
+      });
+      btnToggle.addEventListener("click", function () {
+        if (listening) setListening(false);
+        else {
+          usingSpeech = false;
+          hintRow.textContent = "Mock mode · Web Speech optional";
+          setListening(true);
+        }
+      });
+      btnClear.addEventListener("click", function () {
+        clearTranscript(true);
+      });
+      btnSpeech.addEventListener("click", function () {
+        if (!listening) setListening(true);
+        startSpeech();
+      });
+    })();
+  </script>
+</body>
+</html>
