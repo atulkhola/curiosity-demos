@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stolen iPhone charger shortcut — Curiosity demo</title>
+  <meta name="description" content="Reverse-engineered iOS Shortcuts automation: charger-connected trigger that emails location + selfie. Not AI. Not a built-in Apple feature." />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --card: #151a21;
+      --card2: #1a2028;
+      --border: #2a3038;
+      --text: #e8eaed;
+      --muted: #9aa3ad;
+      --accent: #3d7eff;
+      --accent-soft: #1e3a5f;
+      --warn: #f0a020;
+      --warn-bg: #2a1f0a;
+      --ok: #3dd68c;
+      --danger: #ff6b6b;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      padding: 1.25rem 1rem 3rem; display: grid; place-items: start center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .wrap { width: min(560px, 100%); display: grid; gap: 1rem; }
+    a { color: #8ab4ff; }
+    .back {
+      font-size: 0.8rem; opacity: 0.7; text-decoration: none; color: var(--muted);
+      display: inline-flex; align-items: center; gap: 0.35rem;
+    }
+    .back:hover { color: var(--text); }
+
+    .banner {
+      display: flex; gap: 0.75rem; align-items: flex-start;
+      padding: 0.85rem 1rem; border-radius: 12px;
+      background: var(--warn-bg); border: 1px solid #5a4010;
+      font-size: 0.82rem; line-height: 1.45;
+    }
+    .banner strong { color: var(--warn); display: block; margin-bottom: 0.2rem; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .banner p { margin: 0; color: #e8d9b8; }
+
+    .hero {
+      border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
+      background: linear-gradient(160deg, #1a1208 0%, #12161c 55%, #0e1218 100%);
+      padding: 1.15rem 1.2rem 1.25rem;
+    }
+    .hero .eyebrow {
+      font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #ff8c42; font-weight: 650; margin-bottom: 0.55rem;
+    }
+    .hero h1 {
+      margin: 0 0 0.65rem; font-size: 1.35rem; font-weight: 750;
+      letter-spacing: -0.02em; line-height: 1.25;
+    }
+    .hero .hook {
+      margin: 0; font-size: 0.88rem; color: var(--muted); line-height: 1.45;
+    }
+    .hero .meta {
+      margin-top: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.4rem;
+    }
+    .pill {
+      font-size: 0.72rem; padding: 0.35rem 0.65rem; border-radius: 999px;
+      background: var(--card2); border: 1px solid var(--border); color: var(--muted);
+    }
+    .pill.accent { border-color: #3d5a8a; color: #a8c4ff; background: var(--accent-soft); }
+
+    section.card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1rem 1.05rem 1.1rem;
+    }
+    section.card h2 {
+      margin: 0 0 0.35rem; font-size: 0.95rem; font-weight: 650;
+    }
+    section.card .sub {
+      margin: 0 0 0.85rem; font-size: 0.78rem; color: var(--muted); line-height: 1.4;
+    }
+
+    .progress {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.75rem; font-size: 0.75rem; color: var(--muted);
+    }
+    .progress bar, .bar {
+      flex: 1; height: 6px; border-radius: 999px; background: #232a33;
+      margin: 0 0.65rem; overflow: hidden;
+    }
+    .bar > i {
+      display: block; height: 100%; width: 0%; background: var(--ok);
+      border-radius: 999px; transition: width 0.25s ease;
+    }
+
+    .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+    .checks li {
+      display: grid; grid-template-columns: auto 1fr; gap: 0.7rem; align-items: start;
+      padding: 0.75rem 0.8rem; border-radius: 11px;
+      background: var(--card2); border: 1px solid var(--border);
+      cursor: pointer; user-select: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .checks li:hover { border-color: #3a4552; }
+    .checks li.done {
+      border-color: #2a5a42; background: #122018;
+    }
+    .checks li.done .step-title { text-decoration: line-through; opacity: 0.7; }
+    .tick {
+      width: 22px; height: 22px; border-radius: 7px; margin-top: 1px;
+      border: 2px solid #4a5562; display: grid; place-items: center;
+      flex-shrink: 0; transition: background 0.15s, border-color 0.15s;
+    }
+    .checks li.done .tick {
+      background: var(--ok); border-color: var(--ok); color: #0b0d10;
+    }
+    .tick svg { opacity: 0; width: 14px; height: 14px; }
+    .checks li.done .tick svg { opacity: 1; }
+    .step-title { font-size: 0.88rem; font-weight: 600; margin: 0 0 0.2rem; }
+    .step-body { font-size: 0.78rem; color: var(--muted); line-height: 1.4; margin: 0; }
+    .step-body code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem; background: #0e1218; padding: 0.1rem 0.35rem;
+      border-radius: 4px; color: #c8d0d8;
+    }
+
+    .flow {
+      display: grid; gap: 0.5rem;
+    }
+    .flow-step {
+      display: grid; grid-template-columns: 28px 1fr; gap: 0.65rem; align-items: start;
+      font-size: 0.82rem; line-height: 1.4;
+    }
+    .num {
+      width: 28px; height: 28px; border-radius: 8px; background: var(--accent-soft);
+      border: 1px solid #3d5a8a; color: #a8c4ff; display: grid; place-items: center;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .flow-step strong { display: block; margin-bottom: 0.15rem; font-size: 0.86rem; }
+    .flow-step span { color: var(--muted); font-size: 0.78rem; }
+
+    .caveats { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+    .caveats li {
+      padding: 0.7rem 0.8rem; border-radius: 10px; font-size: 0.8rem; line-height: 1.4;
+      background: #1a1414; border: 1px solid #3a2828; color: #e8c8c8;
+    }
+    .caveats li::before {
+      content: "! "; color: var(--danger); font-weight: 700;
+    }
+
+    .ideas { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+    .ideas li {
+      padding: 0.65rem 0.8rem; border-radius: 10px; font-size: 0.8rem; line-height: 1.4;
+      background: var(--card2); border: 1px solid var(--border); color: var(--muted);
+    }
+    .ideas li strong { color: var(--text); }
+
+    .cta-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+      padding: 0.65rem 0.95rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+      text-decoration: none; border: 0; cursor: pointer; font: inherit;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 0.78rem; padding: 0.45rem 0.7rem; }
+
+    .sources {
+      font-size: 0.75rem; color: var(--muted); line-height: 1.45;
+      padding: 0.85rem 1rem; border-radius: 12px;
+      background: #12161c; border: 1px solid #252b34;
+    }
+    .sources a { word-break: break-all; }
+
+    .footer-note {
+      font-size: 0.72rem; color: #6b7380; text-align: center; line-height: 1.4;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="../">← Curiosity demos</a>
+
+    <div class="banner" role="status">
+      <div>
+        <strong>Not AI · Not a magic Apple feature</strong>
+        <p>Viral Instagram carousels framed this as AI / built-in recovery. It is a <em>user-built iOS Shortcuts automation</em> (charger trigger → location + front photo → email/message), popularized in an X thread by @Numan_Ai12 and reshared by @temi_ajao.</p>
+      </div>
+    </div>
+
+    <header class="hero">
+      <div class="eyebrow">Charger trap · reverse engineer</div>
+      <h1>iPhone stolen. Thief plugs it in. Front camera + location fire.</h1>
+      <p class="hook">When the phone connects to power, a Shortcuts automation can wake cellular, grab GPS, snap a selfie, and send it to you — a backup after Find My / Lost Mode / Stolen Device Protection.</p>
+      <div class="meta">
+        <span class="pill accent">iOS Shortcuts</span>
+        <span class="pill">Trigger: Charger connected</span>
+        <span class="pill">Tap checklist ↓</span>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>Do this first (real recovery)</h2>
+      <p class="sub">The shortcut is a backup. Official tools come first.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://www.icloud.com/find" rel="noopener" target="_blank">Open Find My on iCloud</a>
+        <a class="btn btn-secondary" href="https://support.apple.com/HT201472" rel="noopener" target="_blank">Lost Mode help</a>
+      </div>
+      <ul class="checks" style="margin-top:0.85rem" id="firstChecks" aria-label="Official recovery checklist">
+        <li data-key="findmy" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Mark as Lost in Find My</p>
+            <p class="step-body">Locks the device, shows a custom message + phone number, tracks location when online.</p>
+          </div>
+        </li>
+        <li data-key="sdp" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Confirm Stolen Device Protection</p>
+            <p class="step-body">Settings → Face ID &amp; Passcode → Stolen Device Protection — delays sensitive changes away from familiar locations.</p>
+          </div>
+        </li>
+        <li data-key="report" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Report to carrier + police</p>
+            <p class="step-body">IMEI blacklist / case number still matter even if the shortcut later pings.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Build the Shortcuts automation</h2>
+      <p class="sub">Typical @Numan_Ai12-style flow. Tap each step as you configure it on your phone.</p>
+      <div class="progress">
+        <span id="progLabel">0 / 8</span>
+        <div class="bar" aria-hidden="true"><i id="progBar"></i></div>
+        <button type="button" class="btn-ghost" id="resetBtn">Reset</button>
+      </div>
+      <ul class="checks" id="buildChecks" aria-label="Shortcuts build checklist">
+        <li data-key="b1" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Open Shortcuts → Automation</p>
+            <p class="step-body">Create Personal Automation (not a shareable Shortcut alone — you need the <code>Automation</code> trigger).</p>
+          </div>
+        </li>
+        <li data-key="b2" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Trigger: Charger → Is Connected</p>
+            <p class="step-body">When power connects (Lightning/USB-C/MagSafe), the automation starts.</p>
+          </div>
+        </li>
+        <li data-key="b3" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Run Immediately (no Ask Before Running)</p>
+            <p class="step-body">Critical: disable confirmation so it can fire while the phone is in someone else’s hands.</p>
+          </div>
+        </li>
+        <li data-key="b4" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Turn Airplane Mode off</p>
+            <p class="step-body">Action: Set Airplane Mode → Off (thief may have toggled it to kill Find My).</p>
+          </div>
+        </li>
+        <li data-key="b5" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Enable Cellular Data</p>
+            <p class="step-body">Set Mobile Data / Cellular Data → On so email/iMessage can leave the device.</p>
+          </div>
+        </li>
+        <li data-key="b6" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Get Current Location (high accuracy)</p>
+            <p class="step-body">Get Current Location → Current Location; prefer Precise Location allowed for Shortcuts.</p>
+          </div>
+        </li>
+        <li data-key="b7" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Take Photo — Front, Show Preview OFF</p>
+            <p class="step-body">Camera → Front; turn off Show Camera Preview so it doesn’t flash a big UI to the thief.</p>
+          </div>
+        </li>
+        <li data-key="b8" tabindex="0" role="checkbox" aria-checked="false">
+          <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div>
+            <p class="step-title">Send Email (or Message) with location + photo</p>
+            <p class="step-body">Attach Current Location + the photo; recipient = your backup email or trusted contact. Test once yourself.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>What fires when they charge</h2>
+      <p class="sub">Mental model of the Numan-style chain.</p>
+      <div class="flow">
+        <div class="flow-step"><span class="num">1</span><div><strong>Charger connected</strong><span>Automation trigger (Run Immediately).</span></div></div>
+        <div class="flow-step"><span class="num">2</span><div><strong>Restore radios</strong><span>Airplane Mode off → Cellular Data on.</span></div></div>
+        <div class="flow-step"><span class="num">3</span><div><strong>Locate</strong><span>High-accuracy Current Location.</span></div></div>
+        <div class="flow-step"><span class="num">4</span><div><strong>Face snap</strong><span>Front camera, preview hidden.</span></div></div>
+        <div class="flow-step"><span class="num">5</span><div><strong>Exfiltrate</strong><span>Email / Message with coords + image.</span></div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Caveats — it can fail</h2>
+      <p class="sub">Encode these before you trust it.</p>
+      <ul class="caveats">
+        <li>Locked phone, missing permissions, Low Power Mode, or iOS version quirks can block camera / location / Mail actions.</li>
+        <li>Stolen Device Protection and Lockdown Mode may restrict automation or network behavior — test on your device/OS.</li>
+        <li>It also fires on <em>your</em> normal charging. Add a confirmation dialog, Focus filter, time window, or “Ask Before Running” if daily false positives annoy you (trade-off vs stealth).</li>
+        <li>Thief never plugs in → nothing sends. Find My + police report remain primary.</li>
+        <li>Privacy: you are building a self-surveillance trap on your own device — don’t deploy this pattern on someone else’s phone.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Iteration ideas</h2>
+      <ul class="ideas">
+        <li><strong>Time window</strong> — only run overnight / outside work hours so home charging is quiet.</li>
+        <li><strong>Wi-Fi SSID check</strong> — skip if connected to “Home” / office; fire only on unknown networks.</li>
+        <li><strong>Dual channel</strong> — email + iMessage (or Telegram via API shortcut) in case one fails.</li>
+        <li><strong>Battery %</strong> — also trigger on Battery Level drops / rises past a threshold while locked.</li>
+        <li><strong>Silent log</strong> — append to iCloud Drive note with timestamp even if send fails.</li>
+      </ul>
+    </section>
+
+    <div class="sources">
+      <strong style="color:var(--text)">Sources</strong><br />
+      Instagram carousel: <a href="https://www.instagram.com/p/Dc-ivj7DNLg/" rel="noopener" target="_blank">@temi_ajao /p/Dc-ivj7DNLg</a><br />
+      Original technique thread: <a href="https://x.com/Numan_Ai12" rel="noopener" target="_blank">@Numan_Ai12 on X</a><br />
+      Apple: <a href="https://www.icloud.com/find" rel="noopener" target="_blank">Find My</a> ·
+      <a href="https://support.apple.com/HT201472" rel="noopener" target="_blank">Lost Mode</a>
+    </div>
+
+    <p class="footer-note">Educational reverse-engineer for Curiosity demos — not affiliated with Apple. Configure at your own risk; verify behavior on your iOS version.</p>
+  </div>
+
+  <script>
+    (function () {
+      const STORAGE = 'curiosity-stolen-iphone-checks-v1';
+      const build = document.getElementById('buildChecks');
+      const first = document.getElementById('firstChecks');
+      const progLabel = document.getElementById('progLabel');
+      const progBar = document.getElementById('progBar');
+      const resetBtn = document.getElementById('resetBtn');
+
+      function load() {
+        try { return JSON.parse(localStorage.getItem(STORAGE) || '{}'); }
+        catch { return {}; }
+      }
+      function save(state) {
+        try { localStorage.setItem(STORAGE, JSON.stringify(state)); } catch (_) {}
+      }
+
+      let state = load();
+
+      function applyItem(li) {
+        const key = li.dataset.key;
+        const on = !!state[key];
+        li.classList.toggle('done', on);
+        li.setAttribute('aria-checked', on ? 'true' : 'false');
+      }
+
+      function refreshProgress() {
+        const items = [...build.querySelectorAll('li')];
+        const done = items.filter((li) => state[li.dataset.key]).length;
+        progLabel.textContent = done + ' / ' + items.length;
+        progBar.style.width = (items.length ? (done / items.length) * 100 : 0) + '%';
+      }
+
+      function bindList(ul) {
+        ul.querySelectorAll('li').forEach((li) => {
+          applyItem(li);
+          const toggle = () => {
+            const key = li.dataset.key;
+            state[key] = !state[key];
+            save(state);
+            applyItem(li);
+            refreshProgress();
+          };
+          li.addEventListener('click', toggle);
+          li.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+          });
+        });
+      }
+
+      bindList(build);
+      bindList(first);
+      refreshProgress();
+
+      resetBtn.addEventListener('click', () => {
+        [...build.querySelectorAll('li')].forEach((li) => { delete state[li.dataset.key]; applyItem(li); });
+        save(state);
+        refreshProgress();
+      });
+    })();
+  </script>
+</body>
+</html>
