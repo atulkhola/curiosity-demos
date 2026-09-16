@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Brand API loop — Extract · Search · Verify</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --bg-elevated: #151a21;
+      --bg-soft: #12161c;
+      --ink: #e8eaed;
+      --ink-muted: #9aa3ad;
+      --ink-faint: #5c6570;
+      --line: rgba(232, 234, 237, 0.1);
+      --accent: #3d7eff;
+      --accent-soft: rgba(61, 126, 255, 0.16);
+      --accent-strong: #8ab4ff;
+      --chip: #1c232c;
+      --chip-on: rgba(61, 126, 255, 0.22);
+      --ok: #3dde8c;
+      --warn: #f5c542;
+      --bad: #ff6b6b;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 48px rgba(0, 0, 0, 0.35);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 70% 45% at 15% 0%, rgba(61, 126, 255, 0.12), transparent 55%),
+        radial-gradient(ellipse 50% 40% at 95% 100%, rgba(120, 80, 255, 0.07), transparent 50%);
+      color: var(--ink);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.45;
+    }
+
+    .shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 1.75rem 1.15rem 3rem;
+    }
+
+    header.app-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.35rem;
+      animation: rise 0.55s var(--ease) both;
+    }
+
+    .brand h1 {
+      font-size: clamp(1.4rem, 3.5vw, 1.9rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+
+    .brand .sub {
+      margin-top: 0.35rem;
+      color: var(--ink-muted);
+      font-size: 0.88rem;
+      max-width: 38rem;
+    }
+
+    .quote-pill {
+      display: inline-block;
+      margin-top: 0.65rem;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    .mode-switch {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      padding: 0.3rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+    }
+
+    .mode-switch button {
+      border: none;
+      background: transparent;
+      color: var(--ink-muted);
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.5rem 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.2s var(--ease), color 0.2s var(--ease);
+    }
+
+    .mode-switch button[aria-pressed="true"] {
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+    }
+
+    .mode-switch button:hover { color: var(--ink); }
+
+    .panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.1rem 1.15rem;
+      animation: rise 0.5s var(--ease) both;
+    }
+
+    .panel h2 {
+      font-size: 0.72rem;
+      font-weight: 650;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 0.75rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.1rem;
+      align-items: start;
+    }
+
+    .layout.full { grid-template-columns: 1fr; }
+    .layout.three { grid-template-columns: 1fr 1fr 1fr; }
+
+    label.field {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--ink-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.9rem;
+      padding: 0.65rem 0.75rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    textarea {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      line-height: 1.5;
+      resize: vertical;
+      min-height: 220px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--chip);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.55rem 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+    .btn.primary {
+      background: var(--accent-soft);
+      border-color: rgba(61, 126, 255, 0.45);
+      color: var(--accent-strong);
+    }
+    .btn.primary:hover { background: rgba(61, 126, 255, 0.28); }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 0.5rem 0 0.85rem;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: var(--chip);
+      color: var(--ink-muted);
+      font: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .chip:hover, .chip[aria-pressed="true"] {
+      background: var(--chip-on);
+      border-color: rgba(61, 126, 255, 0.45);
+      color: var(--accent-strong);
+    }
+
+    .note {
+      margin-top: 0.65rem;
+      padding: 0.65rem 0.8rem;
+      border-radius: var(--radius-sm);
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+      line-height: 1.4;
+    }
+
+    .note.accent {
+      background: var(--accent-soft);
+      border-color: rgba(61, 126, 255, 0.3);
+      color: var(--accent-strong);
+    }
+
+    .brand-board {
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 0.45rem;
+    }
+
+    .swatch {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+    }
+
+    .swatch .block {
+      height: 48px;
+    }
+
+    .swatch .meta {
+      padding: 0.35rem 0.4rem;
+      font-size: 0.65rem;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+      word-break: break-all;
+    }
+
+    .type-sample {
+      padding: 0.9rem 1rem;
+      border-radius: var(--radius-sm);
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+    }
+
+    .type-sample .display {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 0.25rem;
+    }
+
+    .type-sample .body {
+      font-size: 0.88rem;
+      color: var(--ink-muted);
+    }
+
+    .type-sample .meta {
+      margin-top: 0.55rem;
+      font-size: 0.7rem;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+    }
+
+    .voice-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .voice-chips span {
+      font-size: 0.72rem;
+      padding: 0.3rem 0.55rem;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--line);
+      color: var(--ink-muted);
+    }
+
+    .components-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .components-list span {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      padding: 0.28rem 0.5rem;
+      border-radius: 6px;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      color: var(--ink-muted);
+    }
+
+    .results {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .result-card {
+      text-align: left;
+      width: 100%;
+      padding: 0.85rem 0.95rem;
+      border-radius: var(--radius-sm);
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .result-card:hover, .result-card:focus-visible {
+      border-color: var(--accent);
+      background: #1a222c;
+      outline: none;
+    }
+
+    .result-card .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .result-card .name { font-weight: 650; font-size: 0.95rem; }
+    .result-card .score {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent-strong);
+      font-variant-numeric: tabular-nums;
+    }
+    .result-card .why {
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+      margin-bottom: 0.55rem;
+      line-height: 1.35;
+    }
+
+    .mini-palette {
+      display: flex;
+      gap: 0.25rem;
+      height: 18px;
+    }
+
+    .mini-palette i {
+      flex: 1;
+      border-radius: 4px;
+      display: block;
+    }
+
+    .score-hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .score-ring {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 1.55rem;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      border: 3px solid;
+      background: var(--bg-soft);
+    }
+
+    .score-ring.green { border-color: var(--ok); color: var(--ok); }
+    .score-ring.amber { border-color: var(--warn); color: var(--warn); }
+    .score-ring.red { border-color: var(--bad); color: var(--bad); }
+
+    .traffic {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      font-weight: 650;
+    }
+
+    .traffic .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .list-block {
+      margin-top: 0.75rem;
+    }
+
+    .list-block h3 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink-faint);
+      margin-bottom: 0.45rem;
+    }
+
+    .list-block ul {
+      list-style: none;
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .list-block li {
+      font-size: 0.82rem;
+      padding: 0.55rem 0.7rem;
+      border-radius: 8px;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      color: var(--ink-muted);
+      line-height: 1.35;
+    }
+
+    .list-block li.fix {
+      border-color: rgba(61, 126, 255, 0.35);
+      color: var(--accent-strong);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+    }
+
+    .candidate-preview {
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px dashed var(--line);
+      background: var(--bg-soft);
+      margin-top: 0.5rem;
+    }
+
+    .candidate-preview .cp-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .candidate-preview .cp-body {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      margin-bottom: 0.65rem;
+    }
+
+    .candidate-preview .cp-btn {
+      display: inline-block;
+      padding: 0.4rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 650;
+      color: #fff;
+    }
+
+    footer.credits {
+      margin-top: 1.75rem;
+      padding: 1rem 1.1rem;
+      border-radius: var(--radius);
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+      line-height: 1.55;
+      animation: rise 0.55s var(--ease) 0.08s both;
+    }
+
+    footer.credits a { color: var(--accent-strong); }
+    footer.credits .links { display: flex; flex-wrap: wrap; gap: 0.35rem 0.85rem; margin-top: 0.45rem; }
+
+    .toast {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: #1e2834;
+      border: 1px solid rgba(61, 126, 255, 0.4);
+      color: var(--accent-strong);
+      padding: 0.55rem 1rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s var(--ease);
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .hidden { display: none !important; }
+
+    .stack { display: grid; gap: 0.85rem; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 820px) {
+      .layout, .layout.three { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="app-header">
+      <div class="brand">
+        <h1>Brand API loop</h1>
+        <p class="sub">Pedagogical toy for Taste Labs' Extract → Search → Verify agent pattern. Offline presets only — no live API calls.</p>
+        <span class="quote-pill">design_system as structured context · anti-slop verification</span>
+      </div>
+      <div class="mode-switch" role="tablist" aria-label="Modes">
+        <button type="button" data-mode="extract" aria-pressed="true">Extract</button>
+        <button type="button" data-mode="search" aria-pressed="false">Search</button>
+        <button type="button" data-mode="verify" aria-pressed="false">Verify</button>
+      </div>
+    </header>
+
+    <!-- EXTRACT -->
+    <section id="mode-extract" class="stack" data-panel>
+      <div class="layout">
+        <div class="panel">
+          <h2>Preset brands</h2>
+          <div class="chips" id="preset-chips"></div>
+          <label class="field" for="url-input">URL (toy extractor)</label>
+          <div class="row">
+            <input type="text" id="url-input" placeholder="e.g. stripe.com, linear.app, notion.so" style="flex:1;min-width:12rem" />
+            <button type="button" class="btn primary" id="extract-url-btn">Extract</button>
+          </div>
+          <div class="note" id="extract-note">Click a preset to load a curated design_system. URL field matches by keyword — real extraction needs Taste Engine API.</div>
+          <div class="row" style="margin-top:0.85rem">
+            <button type="button" class="btn primary" id="copy-json-btn">Copy design_system JSON</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Live brand board</h2>
+          <div class="brand-board" id="brand-board"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>design_system JSON</h2>
+        <textarea id="json-panel" readonly spellcheck="false" aria-label="design_system JSON"></textarea>
+      </div>
+    </section>
+
+    <!-- SEARCH -->
+    <section id="mode-search" class="stack hidden" data-panel>
+      <div class="panel">
+        <h2>Aesthetic search</h2>
+        <label class="field" for="search-input">Natural language query</label>
+        <div class="row">
+          <input type="text" id="search-input" placeholder="dark brutalist developer tools, soft pastel wellness, mono editorial…" style="flex:1;min-width:12rem" />
+          <button type="button" class="btn primary" id="search-btn">Search</button>
+        </div>
+        <div class="chips" id="search-suggestions" style="margin-top:0.65rem"></div>
+        <div class="note">Client-side keyword scoring over the curated corpus. Click a card to load it into Extract context.</div>
+      </div>
+      <div class="panel">
+        <h2>Ranked results</h2>
+        <div class="results" id="search-results"></div>
+      </div>
+    </section>
+
+    <!-- VERIFY -->
+    <section id="mode-verify" class="stack hidden" data-panel>
+      <div class="layout">
+        <div class="panel">
+          <h2>Reference brand</h2>
+          <label class="field" for="ref-select">From presets / current extract</label>
+          <select id="ref-select"></select>
+          <div id="ref-mini" style="margin-top:0.75rem"></div>
+        </div>
+        <div class="panel">
+          <h2>Candidate page (mock drift)</h2>
+          <label class="field" for="cand-select">Built-in candidates</label>
+          <select id="cand-select"></select>
+          <div class="candidate-preview" id="cand-preview"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Brand adherence verdict</h2>
+        <div class="score-hero">
+          <div class="score-ring red" id="score-ring">0</div>
+          <div>
+            <div class="traffic" id="traffic-light"><span class="dot" style="background:var(--bad)"></span> Off brand</div>
+            <p class="note" style="margin-top:0.5rem;max-width:28rem" id="verdict-blurb">Pick reference + candidate to score adherence.</p>
+          </div>
+        </div>
+        <div class="layout">
+          <div class="list-block">
+            <h3>Recommendations</h3>
+            <ul id="recs-list"></ul>
+          </div>
+          <div class="list-block">
+            <h3>Concrete fixes</h3>
+            <ul id="fixes-list"></ul>
+          </div>
+        </div>
+        <div class="row" style="margin-top:1rem">
+          <button type="button" class="btn primary" id="copy-fix-prompt-btn">Copy agent fix prompt</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="credits">
+      <strong>Source:</strong>
+      <a href="https://x.com/thaiscbranco_/status/2099909818727453117" rel="noopener" target="_blank">@thaiscbranco_ / Taste Labs Brand API</a>
+      · Pedagogical toy — production path is Taste Engine API / MCP.
+      <div class="links">
+        <a href="https://tastelabs.com/api" rel="noopener" target="_blank">tastelabs.com/api</a>
+        <a href="https://docs.tastelabs.com/" rel="noopener" target="_blank">docs.tastelabs.com</a>
+        <a href="https://docs.tastelabs.com/ai-tools/mcp.md" rel="noopener" target="_blank">MCP docs</a>
+        <a href="https://mcp.tastelabs.com/mcp" rel="noopener" target="_blank">mcp.tastelabs.com/mcp</a>
+        <a href="../">← Curiosity demos</a>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+(function () {
+  "use strict";
+
+  const PRESETS = [
+    {
+      id: "northstar",
+      name: "Northstar Pay",
+      urlLabel: "northstarpay.example",
+      keywords: ["fintech", "payment", "stripe", "blue", "trust", "clean", "saas", "northstar"],
+      colors: ["#0A84FF", "#0B1220", "#F5F7FA", "#1A2332", "#5AC8FA", "#34C759"],
+      fonts: { display: "Inter", body: "Inter", mono: "JetBrains Mono" },
+      voice: ["precise", "trustworthy", "calm", "modern"],
+      spacing: "8px base · generous section padding · 24–32px card radius feel",
+      components: ["Button/primary", "Input/default", "Card/elevated", "Badge/status", "Nav/top"],
+      tags: ["fintech", "saas", "blue", "clean", "trust"]
+    },
+    {
+      id: "atelier",
+      name: "Atelier Mono",
+      urlLabel: "ateliermono.studio",
+      keywords: ["editorial", "mono", "black", "white", "serif", "magazine", "brutalist", "atelier", "portfolio"],
+      colors: ["#111111", "#F4F1EA", "#E8E2D6", "#C45C26", "#888888", "#FFFFFF"],
+      fonts: { display: "Newsreader", body: "IBM Plex Sans", mono: "IBM Plex Mono" },
+      voice: ["editorial", "sharp", "quiet luxury", "tactile"],
+      spacing: "tight type leading · asymmetric margins · 4px hairlines",
+      components: ["Marquee", "PullQuote", "Grid/asymmetric", "Link/underline", "Footer/colophon"],
+      tags: ["editorial", "mono", "brutalist", "portfolio", "warm"]
+    },
+    {
+      id: "bloom",
+      name: "Bloom Care",
+      urlLabel: "bloomcare.health",
+      keywords: ["wellness", "pastel", "soft", "health", "care", "pink", "rounded", "bloom", "calm"],
+      colors: ["#FF8FAB", "#FFF0F5", "#B8E0D2", "#5C4B51", "#FFC2D1", "#7EC8B0"],
+      fonts: { display: "Fraunces", body: "Nunito", mono: "Source Code Pro" },
+      voice: ["warm", "reassuring", "gentle", "human"],
+      spacing: "soft 16px rhythm · pill CTAs · airy hero",
+      components: ["Hero/soft", "Card/rounded", "Chip/mood", "CTA/pill", "Testimonial"],
+      tags: ["wellness", "pastel", "soft", "health", "warm"]
+    },
+    {
+      id: "volt",
+      name: "Volt Devtools",
+      urlLabel: "volt.dev",
+      keywords: ["developer", "dark", "neon", "green", "terminal", "devtools", "brutalist", "volt", "code", "cyber"],
+      colors: ["#0D1117", "#39FF14", "#161B22", "#58A6FF", "#F0F6FC", "#FF7B72"],
+      fonts: { display: "Space Grotesk", body: "IBM Plex Sans", mono: "JetBrains Mono" },
+      voice: ["technical", "irreverent", "fast", "dense"],
+      spacing: "compact rows · terminal gutters · 2px borders",
+      components: ["CodeBlock", "Sidebar/tree", "Tab/underline", "Toast/error", "CLI/prompt"],
+      tags: ["developer", "dark", "neon", "devtools", "brutalist"]
+    },
+    {
+      id: "lumen",
+      name: "Lumen Commerce",
+      urlLabel: "lumen.shop",
+      keywords: ["ecommerce", "commerce", "warm", "serif", "luxury", "retail", "lumen", "gold", "product"],
+      colors: ["#1C1917", "#FAF7F2", "#C9A227", "#78716C", "#292524", "#E7E5E4"],
+      fonts: { display: "Playfair Display", body: "DM Sans", mono: "DM Mono" },
+      voice: ["refined", "confident", "tactile", "premium"],
+      spacing: "product grid 24px · generous PDP whitespace",
+      components: ["ProductCard", "Price/tag", "Gallery/zoom", "AddToCart", "Promo/banner"],
+      tags: ["ecommerce", "luxury", "warm", "serif", "retail"]
+    },
+    {
+      id: "signal",
+      name: "Signal Board",
+      urlLabel: "signalboard.io",
+      keywords: ["dashboard", "data", "analytics", "indigo", "charts", "b2b", "signal", "metrics", "saas"],
+      colors: ["#4F46E5", "#0F172A", "#F8FAFC", "#22D3EE", "#64748B", "#A78BFA"],
+      fonts: { display: "Geist", body: "Geist", mono: "Geist Mono" },
+      voice: ["analytical", "clear", "decisive", "sparse"],
+      spacing: "12px denser app chrome · sticky header",
+      components: ["Chart/line", "KPI/stat", "Table/dense", "Filter/bar", "Sidebar/icon"],
+      tags: ["dashboard", "data", "indigo", "saas", "b2b"]
+    }
+  ];
+
+  const CANDIDATES = [
+    {
+      id: "wrong-accent",
+      name: "Wrong accent orange",
+      blurb: "Same layout idea, but primary CTA uses loud orange instead of brand blue.",
+      drift: "accent",
+      mock: {
+        title: "Welcome back",
+        body: "Your balance looks great today.",
+        btn: "Continue",
+        btnColor: "#FF5500",
+        titleFont: "Inter, system-ui, sans-serif",
+        bodyFont: "Inter, system-ui, sans-serif",
+        bg: "#0B1220",
+        ink: "#F5F7FA"
+      }
+    },
+    {
+      id: "wrong-type",
+      name: "Wrong typeface stack",
+      blurb: "Generic Inter everywhere — ignores brand display / body pairing.",
+      drift: "type",
+      mock: {
+        title: "Ship faster",
+        body: "A rebuilt marketing page that almost matches… except the type.",
+        btn: "Get started",
+        btnColor: "#0A84FF",
+        titleFont: "Inter, system-ui, sans-serif",
+        bodyFont: "Inter, system-ui, sans-serif",
+        bg: "#111",
+        ink: "#eee"
+      }
+    },
+    {
+      id: "off-voice",
+      name: "Off-voice copy",
+      blurb: "Hypey startup slang where the brand wants calm precision.",
+      drift: "voice",
+      mock: {
+        title: "YOLO your stack!!!",
+        body: "Crush KPIs with our insane AI sauce 🚀🔥",
+        btn: "Let's goo",
+        btnColor: "#0A84FF",
+        titleFont: "system-ui, sans-serif",
+        bodyFont: "system-ui, sans-serif",
+        bg: "#151a21",
+        ink: "#e8eaed"
+      }
+    },
+    {
+      id: "multi-drift",
+      name: "Multi-axis drift",
+      blurb: "Wrong accent + wrong type + off spacing rhythm — classic agent slop.",
+      drift: "multi",
+      mock: {
+        title: "Almost on brand",
+        body: "Close, but not close enough for adherence.",
+        btn: "Fix me",
+        btnColor: "#FF2D55",
+        titleFont: "Georgia, serif",
+        bodyFont: "Comic Sans MS, cursive",
+        bg: "#1a1020",
+        ink: "#ffe8f0"
+      }
+    }
+  ];
+
+  const SEARCH_SUGGESTIONS = [
+    "dark neon developer tools",
+    "soft pastel wellness",
+    "warm editorial mono",
+    "fintech trust blue",
+    "luxury commerce gold"
+  ];
+
+  let current = PRESETS[0];
+  let lastVerdict = null;
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  function toast(msg) {
+    const el = $("#toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove("show"), 1800);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(() => true).catch(() => fallbackCopy(text));
+    }
+    return Promise.resolve(fallbackCopy(text));
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (_) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function toDesignSystem(p) {
+    return {
+      profile: {
+        name: p.name,
+        url: "https://" + p.urlLabel,
+        voice: p.voice,
+        tags: p.tags
+      },
+      colors: {
+        primary: p.colors[0],
+        background: p.colors[1],
+        surface: p.colors[2] || p.colors[1],
+        palette: p.colors.map((hex, i) => ({ role: ["primary", "bg", "surface", "muted", "accent", "success"][i] || "swatch", hex }))
+      },
+      typography: {
+        display: p.fonts.display,
+        body: p.fonts.body,
+        mono: p.fonts.mono
+      },
+      spacing: p.spacing,
+      components: p.components,
+      _meta: {
+        source: "curiosity-toy-preset",
+        note: "Pedagogical stand-in for Taste Engine result.design_system"
+      }
+    };
+  }
+
+  function renderBoard(p) {
+    const board = $("#brand-board");
+    const swatches = p.colors.map((c) =>
+      `<div class="swatch"><div class="block" style="background:${c}"></div><div class="meta">${c}</div></div>`
+    ).join("");
+    board.innerHTML = `
+      <div>
+        <div style="font-weight:700;font-size:1.05rem;margin-bottom:0.15rem">${esc(p.name)}</div>
+        <div style="font-size:0.75rem;color:var(--ink-faint);font-family:var(--mono)">${esc(p.urlLabel)}</div>
+      </div>
+      <div class="swatches">${swatches}</div>
+      <div class="type-sample">
+        <div class="display" style="font-family:'${esc(p.fonts.display)}', system-ui, serif">${esc(p.name)}</div>
+        <div class="body" style="font-family:'${esc(p.fonts.body)}', system-ui, sans-serif">The quick brown fox jumps over the lazy dog — brand body sample.</div>
+        <div class="meta">display: ${esc(p.fonts.display)} · body: ${esc(p.fonts.body)} · mono: ${esc(p.fonts.mono)}</div>
+      </div>
+      <div>
+        <div class="field" style="margin-bottom:0.35rem">Voice</div>
+        <div class="voice-chips">${p.voice.map((v) => `<span>${esc(v)}</span>`).join("")}</div>
+      </div>
+      <div>
+        <div class="field" style="margin-bottom:0.35rem">Spacing</div>
+        <div style="font-size:0.8rem;color:var(--ink-muted)">${esc(p.spacing)}</div>
+      </div>
+      <div>
+        <div class="field" style="margin-bottom:0.35rem">Components</div>
+        <div class="components-list">${p.components.map((c) => `<span>${esc(c)}</span>`).join("")}</div>
+      </div>
+    `;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[ch]);
+  }
+
+  function setCurrent(p, opts) {
+    current = p;
+    renderBoard(p);
+    $("#json-panel").value = JSON.stringify(toDesignSystem(p), null, 2);
+    $$("#preset-chips .chip").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.dataset.id === p.id ? "true" : "false");
+    });
+    const refSel = $("#ref-select");
+    if (refSel && refSel.value !== p.id) refSel.value = p.id;
+    renderRefMini();
+    if (opts && opts.toast) toast("Loaded " + p.name);
+    runVerify();
+  }
+
+  function initPresets() {
+    const wrap = $("#preset-chips");
+    wrap.innerHTML = PRESETS.map((p) =>
+      `<button type="button" class="chip" data-id="${p.id}" aria-pressed="false">${esc(p.name)}</button>`
+    ).join("");
+    wrap.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip");
+      if (!btn) return;
+      const p = PRESETS.find((x) => x.id === btn.dataset.id);
+      if (p) setCurrent(p, { toast: true });
+    });
+  }
+
+  function closestPreset(query) {
+    const q = query.toLowerCase().trim();
+    if (!q) return null;
+    let best = null;
+    let bestScore = 0;
+    PRESETS.forEach((p) => {
+      let score = 0;
+      const hay = [p.name, p.urlLabel, ...(p.keywords || []), ...(p.tags || []), ...(p.voice || [])].join(" ").toLowerCase();
+      q.split(/[\s,/.-]+/).filter(Boolean).forEach((tok) => {
+        if (hay.includes(tok)) score += 2;
+        if (p.urlLabel.toLowerCase().includes(tok)) score += 3;
+        if (p.name.toLowerCase().includes(tok)) score += 3;
+      });
+      if (score > bestScore) { bestScore = score; best = p; }
+    });
+    return bestScore > 0 ? best : null;
+  }
+
+  function scoreSearch(query) {
+    const tokens = query.toLowerCase().split(/[\s,/.-]+/).filter((t) => t.length > 1);
+    if (!tokens.length) {
+      return PRESETS.map((p) => ({ preset: p, score: 0.35, why: "Browse all curated brands" }));
+    }
+    return PRESETS.map((p) => {
+      const hay = [p.name, p.urlLabel, p.spacing, ...(p.keywords || []), ...(p.tags || []), ...(p.voice || []), p.fonts.display, p.fonts.body].join(" ").toLowerCase();
+      let hits = 0;
+      const matched = [];
+      tokens.forEach((tok) => {
+        if (hay.includes(tok)) {
+          hits += 1;
+          matched.push(tok);
+        }
+      });
+      const score = Math.min(0.99, hits / tokens.length);
+      const why = matched.length
+        ? "Matched: " + matched.slice(0, 4).join(", ") + (matched.length > 4 ? "…" : "")
+        : "Weak overlap — try another aesthetic phrase";
+      return { preset: p, score, why };
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  function renderSearchResults(query) {
+    const ranked = scoreSearch(query);
+    const box = $("#search-results");
+    box.innerHTML = ranked.map((r) => {
+      const pct = Math.round(r.score * 100);
+      const pal = r.preset.colors.slice(0, 5).map((c) => `<i style="background:${c}"></i>`).join("");
+      return `
+        <button type="button" class="result-card" data-id="${r.preset.id}">
+          <div class="top">
+            <span class="name">${esc(r.preset.name)}</span>
+            <span class="score">${pct}%</span>
+          </div>
+          <div class="why">${esc(r.why)} · ${esc(r.preset.urlLabel)}</div>
+          <div class="mini-palette">${pal}</div>
+        </button>`;
+    }).join("");
+  }
+
+  function initSearch() {
+    const sug = $("#search-suggestions");
+    sug.innerHTML = SEARCH_SUGGESTIONS.map((s) =>
+      `<button type="button" class="chip" data-q="${esc(s)}">${esc(s)}</button>`
+    ).join("");
+    sug.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip");
+      if (!btn) return;
+      $("#search-input").value = btn.dataset.q;
+      renderSearchResults(btn.dataset.q);
+    });
+    $("#search-btn").addEventListener("click", () => {
+      renderSearchResults($("#search-input").value);
+    });
+    $("#search-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") renderSearchResults($("#search-input").value);
+    });
+    $("#search-results").addEventListener("click", (e) => {
+      const card = e.target.closest(".result-card");
+      if (!card) return;
+      const p = PRESETS.find((x) => x.id === card.dataset.id);
+      if (!p) return;
+      setCurrent(p, { toast: true });
+      setMode("extract");
+    });
+    renderSearchResults("");
+  }
+
+  function initVerifySelects() {
+    const ref = $("#ref-select");
+    ref.innerHTML = PRESETS.map((p) => `<option value="${p.id}">${esc(p.name)} — ${esc(p.urlLabel)}</option>`).join("");
+    ref.addEventListener("change", () => {
+      const p = PRESETS.find((x) => x.id === ref.value);
+      if (p) {
+        current = p;
+        renderBoard(p);
+        $("#json-panel").value = JSON.stringify(toDesignSystem(p), null, 2);
+        $$("#preset-chips .chip").forEach((btn) => {
+          btn.setAttribute("aria-pressed", btn.dataset.id === p.id ? "true" : "false");
+        });
+      }
+      renderRefMini();
+      runVerify();
+    });
+
+    const cand = $("#cand-select");
+    cand.innerHTML = CANDIDATES.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+    cand.addEventListener("change", () => {
+      renderCandidate();
+      runVerify();
+    });
+    renderCandidate();
+  }
+
+  function renderRefMini() {
+    const p = PRESETS.find((x) => x.id === $("#ref-select").value) || current;
+    const pal = p.colors.slice(0, 5).map((c) => `<i style="background:${c}"></i>`).join("");
+    $("#ref-mini").innerHTML = `
+      <div style="font-size:0.85rem;font-weight:650;margin-bottom:0.35rem">${esc(p.name)}</div>
+      <div class="mini-palette" style="height:22px;margin-bottom:0.45rem">${pal}</div>
+      <div class="voice-chips">${p.voice.map((v) => `<span>${esc(v)}</span>`).join("")}</div>
+      <div style="margin-top:0.45rem;font-size:0.72rem;color:var(--ink-faint);font-family:var(--mono)">${esc(p.fonts.display)} / ${esc(p.fonts.body)}</div>
+    `;
+  }
+
+  function renderCandidate() {
+    const c = CANDIDATES.find((x) => x.id === $("#cand-select").value) || CANDIDATES[0];
+    const m = c.mock;
+    $("#cand-preview").innerHTML = `
+      <div style="font-size:0.72rem;color:var(--ink-faint);margin-bottom:0.45rem">${esc(c.blurb)}</div>
+      <div style="background:${m.bg};color:${m.ink};padding:0.85rem 0.9rem;border-radius:10px">
+        <div class="cp-title" style="font-family:${m.titleFont}">${esc(m.title)}</div>
+        <div class="cp-body" style="font-family:${m.bodyFont}">${esc(m.body)}</div>
+        <span class="cp-btn" style="background:${m.btnColor}">${esc(m.btn)}</span>
+      </div>
+    `;
+  }
+
+  function runVerify() {
+    const ref = PRESETS.find((x) => x.id === $("#ref-select").value) || current;
+    const cand = CANDIDATES.find((x) => x.id === $("#cand-select").value) || CANDIDATES[0];
+    const primary = ref.colors[0];
+    const recs = [];
+    const fixes = [];
+    let score = 88;
+
+    if (cand.drift === "accent" || cand.drift === "multi") {
+      score -= 28;
+      recs.push("Primary accent diverges from the reference palette — CTAs read as a different product.");
+      fixes.push(`swap ${cand.mock.btnColor} → brand primary ${primary}`);
+    }
+    if (cand.drift === "type" || cand.drift === "multi") {
+      score -= 22;
+      recs.push("Typography stack ignores brand display/body pairing; hierarchy feels generic.");
+      fixes.push(`replace Inter / generic stack → brand display font ${ref.fonts.display}`);
+      fixes.push(`set body text to ${ref.fonts.body}`);
+    }
+    if (cand.drift === "voice" || cand.drift === "multi") {
+      score -= 24;
+      recs.push("Copy voice clashes with brand adjectives (" + ref.voice.join(", ") + ").");
+      fixes.push(`rewrite headlines to voice: ${ref.voice.slice(0, 3).join(", ")}`);
+    }
+    if (cand.drift === "multi") {
+      score -= 12;
+      recs.push("Spacing & decorative choices pile on drift — treat as full redesign pass.");
+      fixes.push(`restyle surfaces to bg ${ref.colors[1]} / surface ${ref.colors[2] || ref.colors[1]}`);
+    }
+
+    score = Math.max(8, Math.min(96, score));
+    let level = "red";
+    let label = "Off brand";
+    if (score >= 80) { level = "green"; label = "On brand"; }
+    else if (score >= 55) { level = "amber"; label = "Needs work"; }
+
+    if (!recs.length) {
+      recs.push("No major drifts detected in this toy judge.");
+      fixes.push("Keep iterating with Taste Engine brand-adherence in production.");
+    }
+
+    const ring = $("#score-ring");
+    ring.textContent = String(score);
+    ring.className = "score-ring " + level;
+    $("#traffic-light").innerHTML = `<span class="dot" style="background:var(--${level === "green" ? "ok" : level === "amber" ? "warn" : "bad"})"></span> ${label}`;
+    $("#verdict-blurb").textContent = `${cand.name} vs ${ref.name}: toy score ${score}/100. Production uses Taste Engine judge (0–1 score + ranked fixes).`;
+    $("#recs-list").innerHTML = recs.map((r) => `<li>${esc(r)}</li>`).join("");
+    $("#fixes-list").innerHTML = fixes.map((f) => `<li class="fix">${esc(f)}</li>`).join("");
+
+    lastVerdict = { ref, cand, score, level, label, recs, fixes };
+  }
+
+  function buildFixPrompt() {
+    if (!lastVerdict) runVerify();
+    const v = lastVerdict;
+    return [
+      "You are revising a candidate page to match a reference brand.",
+      "",
+      "Reference brand: " + v.ref.name + " (" + v.ref.urlLabel + ")",
+      "Primary: " + v.ref.colors[0],
+      "Fonts: display=" + v.ref.fonts.display + ", body=" + v.ref.fonts.body,
+      "Voice: " + v.ref.voice.join(", "),
+      "",
+      "Candidate: " + v.cand.name,
+      "Adherence score (toy): " + v.score + "/100 (" + v.label + ")",
+      "",
+      "Apply these fixes:",
+      ...v.fixes.map((f, i) => (i + 1) + ". " + f),
+      "",
+      "Recommendations:",
+      ...v.recs.map((r) => "- " + r),
+      "",
+      "Return updated HTML/CSS that stays faithful to the reference design_system."
+    ].join("\n");
+  }
+
+  function setMode(mode) {
+    $$(".mode-switch button").forEach((b) => {
+      b.setAttribute("aria-pressed", b.dataset.mode === mode ? "true" : "false");
+    });
+    $$("[data-panel]").forEach((panel) => {
+      panel.classList.toggle("hidden", panel.id !== "mode-" + mode);
+    });
+  }
+
+  // Wire UI
+  $$(".mode-switch button").forEach((btn) => {
+    btn.addEventListener("click", () => setMode(btn.dataset.mode));
+  });
+
+  $("#extract-url-btn").addEventListener("click", () => {
+    const q = $("#url-input").value.trim();
+    const hit = closestPreset(q);
+    if (hit) {
+      setCurrent(hit, { toast: true });
+      $("#extract-note").className = "note accent";
+      $("#extract-note").textContent = "Toy match → " + hit.name + " (keyword overlap). Real extraction needs Taste Engine API at docs.tastelabs.com.";
+    } else {
+      $("#extract-note").className = "note accent";
+      $("#extract-note").textContent = "No preset matched. This is a toy extractor — production Extract submits a URL, polls result.design_system via Taste Engine API (docs.tastelabs.com). Try stripe, linear, wellness, neon, commerce…";
+      toast("No match — see toy note");
+    }
+  });
+
+  $("#url-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("#extract-url-btn").click();
+  });
+
+  $("#copy-json-btn").addEventListener("click", () => {
+    copyText($("#json-panel").value).then((ok) => toast(ok ? "Copied design_system JSON" : "Copy failed"));
+  });
+
+  $("#copy-fix-prompt-btn").addEventListener("click", () => {
+    copyText(buildFixPrompt()).then((ok) => toast(ok ? "Copied agent fix prompt" : "Copy failed"));
+  });
+
+  initPresets();
+  initSearch();
+  initVerifySelects();
+  setCurrent(PRESETS[0]);
+})();
+  </script>
+</body>
+</html>
