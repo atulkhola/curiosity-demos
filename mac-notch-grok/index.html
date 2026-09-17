@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mac Notch Grok — Curiosity demo</title>
+  <meta name="description" content="Grok Bot in the Mac notch — CSS/JS stand-in inspired by @ab.workss / Rive / John Bai. Curiosity first-pass." />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="meta">
+      <div>
+        <div class="badge">Curiosity · first-pass</div>
+        <h1>Grok Bot in the Mac notch</h1>
+        <p class="lede">Tap chips or watch the auto-cycle. Expand the island, then open the drag-drop window.</p>
+      </div>
+      <div>
+        <div class="controls" id="chips" role="group" aria-label="Bot states">
+          <button type="button" class="chip active" data-state="idle">Idle</button>
+          <button type="button" class="chip" data-state="working">Working</button>
+          <button type="button" class="chip" data-state="uploading">Uploading</button>
+          <button type="button" class="chip" data-state="error">Error</button>
+          <button type="button" class="chip" data-state="done">Task finished</button>
+          <button type="button" class="chip toggle" id="windowBtn" aria-pressed="false">Open window</button>
+        </div>
+        <div class="auto-row" style="margin-top:0.55rem; justify-content:flex-end;">
+          <label><input type="checkbox" id="autoCycle" checked /> Auto-cycle states</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="mac expanded" id="mac" data-state="idle" aria-live="polite">
+        <div class="bezel">
+          <div class="left">
+            <span> File</span>
+            <span>Edit</span>
+            <span>View</span>
+          </div>
+          <div class="right">
+            <span class="dot"></span>
+            <span>Wi‑Fi</span>
+            <span id="clock">9:41</span>
+          </div>
+        </div>
+
+        <div class="notch-anchor">
+          <div class="notch" aria-hidden="true"></div>
+          <div class="island" id="island" role="button" tabindex="0" aria-label="Toggle notch panel">
+            <div class="char" id="char" aria-hidden="true">
+              <div class="eyes">
+                <div class="eye"></div>
+                <div class="eye"></div>
+              </div>
+            </div>
+            <div class="island-body">
+              <div class="status-label" id="statusLabel">Idle</div>
+              <div class="status-msg" id="statusMsg">Waiting for a task…</div>
+              <div class="mini-tasks" id="miniTasks">
+                <span>Start working…</span>
+                <span>Prep workspace</span>
+                <span>Copy that mockup</span>
+              </div>
+            </div>
+            <div class="side-chips" aria-hidden="true">
+              <span class="side-chip a">Awaiting…</span>
+              <span class="side-chip b">Pinged Travel</span>
+              <span class="side-chip c">Looping in</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="drop-zone" id="dropZone">Drop onto notch</div>
+
+        <div class="product-window" id="productWindow">
+          <div class="pw-titlebar">
+            <span class="pw-dot r"></span>
+            <span class="pw-dot y"></span>
+            <span class="pw-dot g"></span>
+            <div class="pw-title">Stay · colorful finds</div>
+          </div>
+          <div class="grid" id="grid">
+            <div class="card" draggable="true"><span>Coral loft</span></div>
+            <div class="card" draggable="true"><span>Mint cabin</span></div>
+            <div class="card" draggable="true"><span>Violet loft</span></div>
+            <div class="card" draggable="true"><span>Sunset pad</span></div>
+            <div class="card" draggable="true"><span>Ocean suite</span></div>
+            <div class="card" draggable="true"><span>Neon flat</span></div>
+          </div>
+        </div>
+
+        <div class="drag-hint">Drag a card toward the notch</div>
+      </div>
+    </div>
+
+    <p class="credits">
+      Inspired by <a href="https://www.instagram.com/reel/DdZlB4sNyga/" rel="noopener" target="_blank">@ab.workss</a>
+      (Rive character + states · <a href="https://rive.app" rel="noopener" target="_blank">@rive.app</a>),
+      sparked by John Bai.
+      This is a <strong>Curiosity CSS/JS stand-in</strong> — not their Rive file.
+      Tap the island to collapse/expand.
+    </p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
