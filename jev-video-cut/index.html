@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jev Video Cut · Curiosity</title>
+  <style>
+    :root {
+      --bg: #0b0d10; --panel: #12161c; --panel2: #151a21; --border: #252b34;
+      --text: #e8eaed; --muted: #8b949e; --green: #3fb950; --red: #f85149;
+      --amber: #d29922; --cyan: #58a6ff; --purple: #a371f7; --pink: #f778ba;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+    header {
+      padding: 1.5rem 1.25rem 1rem; max-width: 1120px; width: 100%; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between;
+    }
+    h1 { font-size: 1.25rem; font-weight: 650; margin: 0 0 0.3rem; letter-spacing: -0.01em; }
+    .sub { margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.45; max-width: 56ch; }
+    .badge {
+      display: inline-block; margin-top: 0.55rem; font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase; padding: 0.22rem 0.5rem; border-radius: 6px;
+      background: rgba(88,166,255,0.12); color: var(--cyan); border: 1px solid rgba(88,166,255,0.35);
+    }
+    .badge.warn { background: rgba(210,153,34,0.15); color: var(--amber); border-color: rgba(210,153,34,0.35); }
+    .badge.ok { background: rgba(63,185,80,0.12); color: var(--green); border-color: rgba(63,185,80,0.35); }
+    .actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    button, .btn {
+      font-family: inherit; cursor: pointer; border-radius: 10px; padding: 0.7rem 1.1rem;
+      font-weight: 600; font-size: 0.85rem; border: 1px solid var(--border); background: #1a222c; color: var(--text);
+    }
+    button.primary { background: var(--cyan); color: #0b0d10; border-color: transparent; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button:hover:not(:disabled) { filter: brightness(1.08); }
+    .thesis, .config, .meters, main, footer { max-width: 1120px; width: 100%; margin: 0 auto; padding-left: 1.25rem; padding-right: 1.25rem; }
+    .thesis { padding-bottom: 0.75rem; }
+    .thesis-card, .config-card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1rem 1.1rem; font-size: 0.82rem; line-height: 1.55; color: #c9d1d9;
+    }
+    .thesis-card strong { color: var(--text); }
+    .pipeline { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; font-size: 0.72rem; font-family: var(--mono); }
+    .pipe { background: #1a222c; border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0.55rem; color: var(--muted); }
+    .pipe.on { border-color: rgba(88,166,255,0.5); color: var(--cyan); }
+    .pipe.done { border-color: rgba(63,185,80,0.45); color: var(--green); }
+    .config { padding-bottom: 1rem; }
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.55rem; align-items: end; margin-top: 0.65rem; }
+    @media (max-width: 720px) { .config-grid { grid-template-columns: 1fr; } }
+    label { display: grid; gap: 0.25rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    input {
+      font-family: var(--mono); font-size: 0.78rem; padding: 0.55rem 0.65rem; border-radius: 8px;
+      border: 1px solid var(--border); background: #0d1117; color: var(--text);
+    }
+    .config-status { margin-top: 0.55rem; font-size: 0.75rem; color: var(--muted); font-family: var(--mono); }
+    .meters { padding-bottom: 1rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem; }
+    @media (max-width: 800px) { .meters { grid-template-columns: 1fr 1fr; } }
+    .meter { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 0.9rem; }
+    .meter .label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.3rem; }
+    .meter .val { font-family: var(--mono); font-size: 1.15rem; font-weight: 650; }
+    main { flex: 1; padding-bottom: 1.5rem; display: grid; grid-template-columns: 260px 1fr; gap: 1rem; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+    .library, .stage, .side { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .panel-h {
+      display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.95rem;
+      border-bottom: 1px solid var(--border); background: #161b22; font-size: 0.72rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.05em; font-weight: 650;
+    }
+    .lib-list { padding: 0.55rem; display: grid; gap: 0.45rem; }
+    .vid {
+      text-align: left; width: 100%; padding: 0.75rem 0.8rem; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--panel2); cursor: pointer;
+    }
+    .vid.active { border-color: var(--cyan); box-shadow: inset 3px 0 0 var(--cyan); }
+    .vid .vtitle { font-size: 0.82rem; font-weight: 650; margin-bottom: 0.2rem; text-transform: none; letter-spacing: 0; }
+    .vid .vmeta { font-size: 0.7rem; color: var(--muted); font-weight: 500; }
+    .stage { min-height: 420px; display: flex; flex-direction: column; }
+    .stage-body { flex: 1; padding: 0.85rem; overflow: auto; }
+    .empty { color: var(--muted); font-size: 0.85rem; line-height: 1.5; padding: 2rem 1rem; text-align: center; }
+    .strip { display: grid; gap: 0.55rem; }
+    .seg {
+      display: grid; grid-template-columns: 72px 1fr auto; gap: 0.7rem; align-items: center;
+      padding: 0.55rem; border-radius: 10px; border: 1px solid var(--border); background: #0d1117;
+      transition: border-color 0.25s, opacity 0.35s, box-shadow 0.25s;
+    }
+    .seg.scoring { background: rgba(88,166,255,0.08); border-color: rgba(88,166,255,0.4); }
+    .seg.err { border-color: rgba(248,81,73,0.55); }
+    .seg.KEEP { border-color: rgba(63,185,80,0.5); box-shadow: inset 3px 0 0 var(--green); }
+    .seg.DROP { opacity: 0.4; border-color: rgba(248,81,73,0.4); }
+    .seg.HOOK { border-color: rgba(163,113,247,0.55); box-shadow: inset 3px 0 0 var(--purple); }
+    .seg.B-ROLL { border-color: rgba(88,166,255,0.45); box-shadow: inset 3px 0 0 var(--cyan); }
+    .seg.CTA { border-color: rgba(247,120,186,0.5); box-shadow: inset 3px 0 0 var(--pink); }
+    .thumb {
+      width: 72px; height: 42px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--c1, #30363d), var(--c2, #161b22));
+      position: relative; overflow: hidden;
+    }
+    .thumb::after {
+      content: ""; position: absolute; inset: 0;
+      background: repeating-linear-gradient(-45deg, transparent, transparent 6px, rgba(255,255,255,0.04) 6px, rgba(255,255,255,0.04) 12px);
+    }
+    .seg-main { min-width: 0; }
+    .seg-time { font-family: var(--mono); font-size: 0.68rem; color: var(--cyan); margin-bottom: 0.15rem; }
+    .seg-asr { font-size: 0.78rem; color: #c9d1d9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .seg-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem; }
+    .chip { font-size: 0.6rem; padding: 0.12rem 0.35rem; border-radius: 4px; background: #21262d; color: var(--muted); font-weight: 600; }
+    .decision { min-width: 96px; text-align: right; }
+    .dec-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; opacity: 0; transition: opacity 0.25s; }
+    .dec-label.show { opacity: 1; }
+    .dec-label.KEEP { color: var(--green); } .dec-label.DROP { color: var(--red); }
+    .dec-label.HOOK { color: var(--purple); } .dec-label.B-ROLL { color: var(--cyan); } .dec-label.CTA { color: var(--pink); }
+    .conf { margin-top: 0.35rem; height: 5px; border-radius: 999px; background: #1c2128; overflow: hidden; opacity: 0; transition: opacity 0.25s; }
+    .conf.show { opacity: 1; }
+    .conf .fill { height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #3d7eff, #58a6ff); transition: width 0.4s ease; }
+    .probs { margin-top: 0.25rem; font-size: 0.58rem; font-family: var(--mono); color: var(--muted); opacity: 0; max-width: 140px; margin-left: auto; }
+    .probs.show { opacity: 1; }
+    .assembled { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: none; }
+    .assembled.show { display: block; }
+    .beats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.4rem; margin-bottom: 0.75rem; }
+    @media (max-width: 700px) { .beats { grid-template-columns: 1fr 1fr; } }
+    .beat { background: #0d1117; border: 1px solid var(--border); border-radius: 10px; padding: 0.55rem 0.6rem; }
+    .beat .bname { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.35rem; }
+    .beat .clips { display: grid; gap: 0.25rem; }
+    .clip {
+      font-size: 0.68rem; font-family: var(--mono); color: var(--text); padding: 0.25rem 0.35rem;
+      border-radius: 5px; background: #161b22; border-left: 2px solid var(--accent, var(--cyan));
+    }
+    .timeline { height: 36px; border-radius: 8px; background: #0d1117; border: 1px solid var(--border); display: flex; overflow: hidden; }
+    .tl-block {
+      height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.58rem;
+      font-weight: 700; letter-spacing: 0.03em; color: #0b0d10; min-width: 0; overflow: hidden; white-space: nowrap;
+    }
+    .side { height: fit-content; grid-column: 1 / -1; }
+    .side-body { padding: 0.95rem 1rem; font-size: 0.82rem; color: #c9d1d9; line-height: 1.5; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 700px) { .side-body { grid-template-columns: 1fr; } }
+    .side-body h3 { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.5rem; }
+    .side-body p { margin: 0 0 0.85rem; }
+    .side-body code { font-family: var(--mono); font-size: 0.75rem; color: var(--cyan); }
+    .export-btns { display: grid; gap: 0.45rem; margin: 0.75rem 0 1rem; }
+    .export-btns button { width: 100%; }
+    .plugin { background: #0d1117; border: 1px dashed #30363d; border-radius: 10px; padding: 0.7rem 0.8rem; font-size: 0.75rem; color: var(--muted); line-height: 1.45; }
+    .legend { display: grid; gap: 0.35rem; font-size: 0.72rem; color: var(--muted); margin-bottom: 1rem; }
+    .legend span { display: flex; align-items: center; gap: 0.4rem; }
+    .sw { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .errbox {
+      display: none; margin: 0.75rem 0 0; padding: 0.7rem 0.85rem; border-radius: 10px;
+      background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.35);
+      color: #ffa198; font-size: 0.78rem; font-family: var(--mono); white-space: pre-wrap;
+    }
+    .errbox.show { display: block; }
+    footer { padding: 0 1.25rem 2rem; font-size: 0.75rem; color: var(--muted); line-height: 1.45; }
+    footer a { color: var(--cyan); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Jev video cut</h1>
+      <p class="sub">Cheap shot index → live TypeSafe Jev Choice scores → storytelling assembler → CapCut / Premiere cut list. Calibrated decisions, not a chat LLM watching full video.</p>
+      <span class="badge warn" id="liveBadge">Awaiting TYPESAFE_API_KEY</span>
+    </div>
+    <div class="actions">
+      <button id="reset" type="button">Reset</button>
+      <button id="indexBtn" type="button">Index</button>
+      <button class="primary" id="runJev" type="button" disabled>Run Jev</button>
+    </div>
+  </header>
+
+  <div class="thesis">
+    <div class="thesis-card">
+      <strong>Thesis:</strong> Feeding whole long videos into an LLM is expensive and slow. Index once (timestamps, thumbnails, ASR snippets, face/scene tags), then <strong>TypeSafe Jev</strong> returns typed decisions with calibrated probabilities — KEEP / DROP / HOOK / B-ROLL / CTA — and assemble a cut.
+      <div class="pipeline">
+        <span class="pipe" id="p0">1 · Library</span>
+        <span class="pipe" id="p1">2 · Index</span>
+        <span class="pipe" id="p2">3 · Live Jev</span>
+        <span class="pipe" id="p3">4 · Assemble</span>
+        <span class="pipe" id="p4">5 · Export</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="config">
+    <div class="config-card">
+      <strong style="color:var(--text)">Live TypeSafe wire</strong>
+      — key stays in <code>localStorage</code> only (never committed). Default endpoint is the public System One API.
+      <div class="config-grid">
+        <label>API base URL
+          <input id="cfgBase" type="text" spellcheck="false" autocomplete="off" />
+        </label>
+        <label>TYPESAFE_API_KEY
+          <input id="cfgKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-…" />
+        </label>
+        <button type="button" id="cfgSave">Save &amp; test</button>
+      </div>
+      <div class="config-status" id="cfgStatus">Not configured</div>
+      <div class="errbox" id="errbox"></div>
+    </div>
+  </div>
+
+  <div class="meters">
+    <div class="meter"><div class="label">Source length</div><div class="val" id="mLen">—</div></div>
+    <div class="meter"><div class="label">Shots indexed</div><div class="val" id="mShots">0</div></div>
+    <div class="meter"><div class="label">Kept / cut</div><div class="val" id="mKeep">—</div></div>
+    <div class="meter"><div class="label">Jev model</div><div class="val" id="mModel">—</div></div>
+  </div>
+
+  <main>
+    <aside class="library">
+      <div class="panel-h">Library · 3 sources</div>
+      <div class="lib-list" id="lib"></div>
+    </aside>
+
+    <section class="stage">
+      <div class="panel-h">
+        <span id="stageTitle">Shot strip</span>
+        <span id="stageStatus">select a video</span>
+      </div>
+      <div class="stage-body">
+        <div class="empty" id="empty">Pick a long source, tap <strong>Index</strong> (ingest stub), save your API key, then <strong>Run Jev</strong> for live Choice scores.</div>
+        <div class="strip" id="strip" hidden></div>
+        <div class="assembled" id="assembled">
+          <div class="panel-h" style="margin:-0.85rem -0.85rem 0.75rem; border-radius:0; border-left:0; border-right:0;">Assembled cut · Hook → Problem → Demo → Payoff → CTA</div>
+          <div class="beats" id="beats"></div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel-h">Export · plugin sketch</div>
+      <div class="side-body">
+        <div>
+          <h3>Legend</h3>
+          <div class="legend">
+            <span><i class="sw" style="background:var(--purple)"></i> HOOK — cold open / pattern interrupt</span>
+            <span><i class="sw" style="background:var(--green)"></i> KEEP — story-critical dialogue</span>
+            <span><i class="sw" style="background:var(--cyan)"></i> B-ROLL — cover / cutaway</span>
+            <span><i class="sw" style="background:var(--pink)"></i> CTA — end card / ask</span>
+            <span><i class="sw" style="background:var(--red)"></i> DROP — filler / false start</span>
+          </div>
+          <h3>Download cut list</h3>
+          <div class="export-btns">
+            <button type="button" id="dlCapcut" disabled>Download CapCut JSON</button>
+            <button type="button" id="dlEdl" disabled>Download Premiere EDL / markers</button>
+          </div>
+        </div>
+        <div>
+          <h3>Plugin sketch</h3>
+          <div class="plugin">
+            CapCut OpenAPI or Premiere CEP/UXP would import this package: markers at source In/Out, Jev decision + calibrated confidence, suggested sequence order. This page ships <code>cut-package.json</code> + <code>.edl</code> — no live plugin bridge yet.
+          </div>
+          <p style="margin-top:0.85rem;font-size:0.75rem;color:var(--muted);">
+            Still stubbed: real ASR, shot detect, face/scene tags, CapCut OpenAPI. Scoring path is live Jev when a key is present.
+          </p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    Curiosity · TypeSafe Jev video cut ·
+    sibling <a href="../jev-compaction/">jev-compaction</a> ·
+    hub <a href="../">curiosity-demos</a> ·
+    API <a href="https://api.typesafe.ai/v1/systemone" rel="noopener">systemone</a>
+  </footer>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════
+       LIVE JEV WIRING — swap base/auth when parent sends production values
+       Endpoint: POST {baseUrl}  (default https://api.typesafe.ai/v1/systemone)
+       Auth:     Authorization: Bearer {TYPESAFE_API_KEY}
+       Body:     { model, state, questions }  — Choice over edit decisions
+       ═══════════════════════════════════════════════════════════════ */
+    const JEV = {
+      LS_KEY: "curiosity.jevVideoCut.apiKey",
+      LS_BASE: "curiosity.jevVideoCut.baseUrl",
+      DEFAULT_BASE: "https://api.typesafe.ai/v1/systemone",
+      MODEL: "jev-latest",
+      DECISIONS: ["KEEP", "DROP", "HOOK", "B-ROLL", "CTA"],
+      getBase() {
+        return (localStorage.getItem(this.LS_BASE) || this.DEFAULT_BASE).trim();
+      },
+      getKey() {
+        return (localStorage.getItem(this.LS_KEY) || "").trim();
+      },
+      setConfig(base, key) {
+        localStorage.setItem(this.LS_BASE, (base || this.DEFAULT_BASE).trim());
+        if (key != null && key !== "") localStorage.setItem(this.LS_KEY, key.trim());
+      },
+      /** Build System One request for one indexed segment */
+      buildRequest(video, seg) {
+        return {
+          model: this.MODEL,
+          state: {
+            task: "Select edit decision for one segment of a long video to build a short cut: Hook → Problem → Demo → Payoff → CTA.",
+            source: {
+              id: video.id,
+              title: video.title,
+              kind: video.kind,
+              duration: video.duration,
+            },
+            segment: {
+              timestamp: seg.t,
+              asr_snippet: seg.asr,
+              tags: seg.tags,
+            },
+          },
+          questions: {
+            decision: {
+              type: "choice",
+              instructions: "Which edit decision should apply to this segment for the short-form cut?",
+              criteria: {
+                KEEP: "Story-critical dialogue or demo that advances Problem, Demo, or Payoff",
+                DROP: "Filler, false start, dead air, mic check, or off-topic banter",
+                HOOK: "Cold open or pattern interrupt suitable for the first seconds",
+                "B-ROLL": "Cover, cutaway, reaction, or visual texture without primary dialogue",
+                CTA: "Call to action, end card, ask, or closing directive",
+              },
+            },
+          },
+        };
+      },
+      /** POST one segment; returns { decision, conf, probabilities, model, raw } */
+      async scoreSegment(video, seg, { signal } = {}) {
+        const key = this.getKey();
+        if (!key) throw new Error("Missing TYPESAFE_API_KEY — paste in the Live TypeSafe wire panel.");
+        const url = this.getBase();
+        const body = this.buildRequest(video, seg);
+        let res;
+        try {
+          res = await fetch(url, {
+            method: "POST",
+            signal,
+            headers: {
+              Authorization: "Bearer " + key,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify(body),
+          });
+        } catch (e) {
+          const msg = String(e && e.message || e);
+          if (/Failed to fetch|NetworkError|CORS/i.test(msg)) {
+            throw new Error(
+              "Network/CORS blocked browser → " + url +
+              ". Parent: provide a CORS-enabled base URL or tiny proxy; keep Authorization: Bearer <TYPESAFE_API_KEY>."
+            );
+          }
+          throw e;
+        }
+        const text = await res.text();
+        let data;
+        try { data = text ? JSON.parse(text) : {}; } catch {
+          throw new Error("Non-JSON response (" + res.status + "): " + text.slice(0, 240));
+        }
+        if (!res.ok) {
+          throw new Error("Jev HTTP " + res.status + ": " + (data.error || data.message || text.slice(0, 240)));
+        }
+        // Support both { answers: { decision: {...} } } and wrapped shapes
+        const answers = data.answers || (data.result && data.result.answers) || data;
+        const ans = answers.decision || answers;
+        const decision = ans.choice || ans.value || ans.decision;
+        if (!decision || !JEV.DECISIONS.includes(decision)) {
+          throw new Error("Unexpected answer shape: " + JSON.stringify(ans).slice(0, 280));
+        }
+        const probs = ans.probabilities || {};
+        const conf = typeof ans.confidence === "number"
+          ? ans.confidence
+          : (typeof probs[decision] === "number" ? probs[decision] : 0.5);
+        return {
+          decision,
+          conf,
+          probabilities: probs,
+          model: data.model || (data.result && data.result.model) || this.MODEL,
+          raw: data,
+        };
+      },
+    };
+
+    const VIDEOS = [
+      {
+        id: "design-talk",
+        title: "Design systems talk",
+        duration: "28:14",
+        durationSec: 1694,
+        kind: "Keynote · stage",
+        segments: [
+          { t: "00:00–00:42", asr: "Welcome — mic check, thank the hosts…", tags: ["face:speaker", "scene:stage"], c1: "#3d2b1f", c2: "#1a1210" },
+          { t: "00:42–01:18", asr: "What if your design system was a product?", tags: ["hook", "face:speaker"], c1: "#2a1f4d", c2: "#12101f" },
+          { t: "01:18–02:05", asr: "Most teams ship tokens, not outcomes.", tags: ["problem", "slide"], c1: "#1f2a3d", c2: "#0f141c" },
+          { t: "02:05–03:40", asr: "Uh… let me find the next slide… sorry.", tags: ["filler"], c1: "#2a2a2a", c2: "#111" },
+          { t: "03:40–05:12", asr: "Three failures: drift, orphan components, no owners.", tags: ["problem", "slide"], c1: "#3d1f2a", c2: "#140c10" },
+          { t: "05:12–06:00", asr: "Audience Q — can you zoom the diagram?", tags: ["b-roll", "crowd"], c1: "#1f3d2a", c2: "#0c1410" },
+          { t: "06:00–08:45", asr: "Live walkthrough: token PR → Figma → ship.", tags: ["demo", "screen"], c1: "#1f3d3d", c2: "#0c1414" },
+          { t: "08:45–09:20", asr: "Water break — random banter about coffee.", tags: ["filler"], c1: "#333", c2: "#111" },
+          { t: "09:20–12:10", asr: "Payoff: one source of truth, weekly governance.", tags: ["payoff", "slide"], c1: "#2a3d1f", c2: "#10140c" },
+          { t: "12:10–13:00", asr: "Close-up of the governance board.", tags: ["b-roll", "board"], c1: "#3d3d1f", c2: "#14140c" },
+          { t: "24:50–26:20", asr: "If you only do one thing — assign owners.", tags: ["cta", "face:speaker"], c1: "#3d1f3d", c2: "#140c14" },
+          { t: "26:20–28:14", asr: "Q&A sprawl, thank-yous, hallway chatter.", tags: ["filler"], c1: "#222", c2: "#0a0a0a" },
+        ],
+      },
+      {
+        id: "product-rec",
+        title: "Product screenrecord",
+        duration: "45:02",
+        durationSec: 2702,
+        kind: "Loom-style · UI",
+        segments: [
+          { t: "00:00–01:10", asr: "Hey team — recording the onboarding flow…", tags: ["face:cam", "ui"], c1: "#1a2333", c2: "#0d1117" },
+          { t: "01:10–02:00", asr: "Watch this — three clicks to first value.", tags: ["hook", "cursor"], c1: "#2b1f4d", c2: "#120e1f" },
+          { t: "02:00–04:30", asr: "Problem: users abandon at the empty state.", tags: ["problem", "heatmap"], c1: "#3d1f1f", c2: "#140c0c" },
+          { t: "04:30–07:00", asr: "Scrolling settings… wrong panel… back.", tags: ["filler", "ui"], c1: "#2a2a2a", c2: "#111" },
+          { t: "07:00–11:20", asr: "Demo: guided checklist → first project green.", tags: ["demo", "ui"], c1: "#1f3d2a", c2: "#0c1410" },
+          { t: "11:20–12:05", asr: "Cutaway: Slack thread celebrating the win.", tags: ["b-roll", "slack"], c1: "#1f2a3d", c2: "#0c1014" },
+          { t: "18:00–19:40", asr: "False start — forgot to share the right tab.", tags: ["filler"], c1: "#333", c2: "#111" },
+          { t: "22:10–28:00", asr: "Deep dive: permission model and edge cases.", tags: ["demo", "docs"], c1: "#1f3d3d", c2: "#0c1414" },
+          { t: "34:00–36:30", asr: "Payoff metric: activation +18% in cohort B.", tags: ["payoff", "chart"], c1: "#2a3d1f", c2: "#10140c" },
+          { t: "40:00–41:00", asr: "Product shot: dashboard hero frame.", tags: ["b-roll", "ui"], c1: "#3d2a1f", c2: "#14100c" },
+          { t: "42:00–43:20", asr: "Try the checklist today — link in description.", tags: ["cta"], c1: "#3d1f3d", c2: "#140c14" },
+          { t: "43:20–45:02", asr: "Outro ramble + desktop notifications.", tags: ["filler"], c1: "#222", c2: "#0a0a0a" },
+        ],
+      },
+      {
+        id: "interview",
+        title: "Founder interview",
+        duration: "12:36",
+        durationSec: 756,
+        kind: "Two-shot · A/B cam",
+        segments: [
+          { t: "00:00–00:35", asr: "Levels, slate, can you hear me okay?", tags: ["filler", "slate"], c1: "#2a2418", c2: "#12100c" },
+          { t: "00:35–01:05", asr: "I almost quit the week before we raised.", tags: ["hook", "face:A"], c1: "#2a1f4d", c2: "#120e1f" },
+          { t: "01:05–02:40", asr: "Problem was we optimized for demos, not retention.", tags: ["problem", "face:A"], c1: "#3d1f2a", c2: "#140c10" },
+          { t: "02:40–03:10", asr: "Interviewer coughs — retake requested.", tags: ["filler"], c1: "#333", c2: "#111" },
+          { t: "03:10–05:00", asr: "We rebuilt onboarding around one aha moment.", tags: ["demo", "face:A"], c1: "#1f3d2a", c2: "#0c1410" },
+          { t: "05:00–05:40", asr: "B-cam: hands sketching the funnel.", tags: ["b-roll", "hands"], c1: "#1f2a3d", c2: "#0c1014" },
+          { t: "05:40–07:20", asr: "Payoff: same burn, 2× weekly actives.", tags: ["payoff", "face:A"], c1: "#2a3d1f", c2: "#10140c" },
+          { t: "07:20–08:00", asr: "Office hallway — team laughing off-mic.", tags: ["b-roll", "office"], c1: "#3d3d1f", c2: "#14140c" },
+          { t: "09:30–10:40", asr: "If you're early: measure the aha, not vanity.", tags: ["cta", "face:A"], c1: "#3d1f3d", c2: "#140c14" },
+          { t: "10:40–12:36", asr: "Wrap, thanks, gear teardown chatter.", tags: ["filler"], c1: "#222", c2: "#0a0a0a" },
+        ],
+      },
+    ];
+
+    let selectedId = VIDEOS[0].id;
+    let indexed = false;
+    let scored = false;
+    let decisions = [];
+    let lastModel = "—";
+    let abortCtrl = null;
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (ch) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+    }
+    function currentVideo() { return VIDEOS.find((v) => v.id === selectedId); }
+    function setPipe(step) {
+      for (let i = 0; i <= 4; i++) {
+        const el = document.getElementById("p" + i);
+        el.classList.remove("on", "done");
+        if (i < step) el.classList.add("done");
+        else if (i === step) el.classList.add("on");
+      }
+    }
+    function showErr(msg) {
+      const box = document.getElementById("errbox");
+      if (!msg) { box.classList.remove("show"); box.textContent = ""; return; }
+      box.textContent = msg;
+      box.classList.add("show");
+    }
+    function refreshKeyUI() {
+      const has = !!JEV.getKey();
+      const badge = document.getElementById("liveBadge");
+      badge.textContent = has ? "Live Jev · key saved locally" : "Awaiting TYPESAFE_API_KEY";
+      badge.className = "badge " + (has ? "ok" : "warn");
+      document.getElementById("cfgStatus").textContent = has
+        ? "Key present · base " + JEV.getBase() + " · model " + JEV.MODEL
+        : "Not configured — Run Jev stays disabled until a key is saved";
+      document.getElementById("runJev").disabled = !(has && indexed) || (abortCtrl != null);
+      document.getElementById("cfgBase").value = JEV.getBase();
+      document.getElementById("cfgKey").value = JEV.getKey();
+    }
+
+    function beatFor(seg, decision) {
+      if (decision === "HOOK") return "Hook";
+      if (decision === "CTA") return "CTA";
+      if (decision === "DROP") return null;
+      const tags = seg.tags.join(" ");
+      if (/problem/.test(tags)) return "Problem";
+      if (/demo/.test(tags)) return "Demo";
+      if (/payoff/.test(tags)) return "Payoff";
+      if (decision === "B-ROLL") return "Demo";
+      if (decision === "KEEP") {
+        if (/problem/.test(tags)) return "Problem";
+        if (/payoff/.test(tags)) return "Payoff";
+        return "Demo";
+      }
+      return null;
+    }
+
+    function renderLibrary() {
+      const lib = document.getElementById("lib");
+      lib.innerHTML = VIDEOS.map((v) => `
+        <button type="button" class="vid ${v.id === selectedId ? "active" : ""}" data-id="${v.id}">
+          <div class="vtitle">${escapeHtml(v.title)}</div>
+          <div class="vmeta">${escapeHtml(v.duration)} · ${escapeHtml(v.kind)}</div>
+        </button>`).join("");
+      lib.querySelectorAll(".vid").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (abortCtrl) abortCtrl.abort();
+          selectedId = btn.dataset.id;
+          indexed = false; scored = false; decisions = [];
+          document.getElementById("dlCapcut").disabled = true;
+          document.getElementById("dlEdl").disabled = true;
+          document.getElementById("assembled").classList.remove("show");
+          renderLibrary(); showEmpty(); updateMeters(); setPipe(0); refreshKeyUI();
+        });
+      });
+    }
+
+    function showEmpty() {
+      document.getElementById("empty").hidden = false;
+      document.getElementById("strip").hidden = true;
+      document.getElementById("strip").innerHTML = "";
+      document.getElementById("stageTitle").textContent = "Shot strip";
+      document.getElementById("stageStatus").textContent = "select a video · tap Index";
+    }
+
+    function updateMeters() {
+      const v = currentVideo();
+      document.getElementById("mLen").textContent = v.duration;
+      document.getElementById("mShots").textContent = indexed ? String(v.segments.length) : "0";
+      document.getElementById("mModel").textContent = lastModel;
+      if (scored) {
+        const kept = decisions.filter((d) => d && d.decision !== "DROP").length;
+        const dropped = decisions.filter((d) => d && d.decision === "DROP").length;
+        document.getElementById("mKeep").textContent = kept + " / " + dropped + " drop";
+      } else document.getElementById("mKeep").textContent = "—";
+    }
+
+    function fmtProbs(probs) {
+      if (!probs || typeof probs !== "object") return "";
+      return Object.entries(probs)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([k, v]) => k + " " + Math.round(v * 100) + "%")
+        .join(" · ");
+    }
+
+    function renderStrip(withScores) {
+      const v = currentVideo();
+      const strip = document.getElementById("strip");
+      document.getElementById("empty").hidden = true;
+      strip.hidden = false;
+      strip.innerHTML = v.segments.map((s, i) => {
+        const d = withScores && decisions[i] ? decisions[i] : null;
+        const cls = d ? d.decision : "";
+        return `
+          <div class="seg ${cls}" id="seg-${i}">
+            <div class="thumb" style="--c1:${s.c1};--c2:${s.c2}"></div>
+            <div class="seg-main">
+              <div class="seg-time">${escapeHtml(s.t)}</div>
+              <div class="seg-asr">${escapeHtml(s.asr)}</div>
+              <div class="seg-tags">${s.tags.map((t) => `<span class="chip">${escapeHtml(t)}</span>`).join("")}</div>
+            </div>
+            <div class="decision">
+              <div class="dec-label ${d ? "show " + d.decision : ""}" id="dec-${i}">${d ? d.decision : ""}</div>
+              <div class="conf ${d ? "show" : ""}" id="conf-${i}"><div class="fill" id="fill-${i}" style="width:${d ? Math.round(d.conf * 100) : 0}%"></div></div>
+              <div class="probs ${d ? "show" : ""}" id="probs-${i}">${d ? escapeHtml(fmtProbs(d.probabilities)) : ""}</div>
+            </div>
+          </div>`;
+      }).join("");
+      document.getElementById("stageTitle").textContent = v.title;
+      document.getElementById("stageStatus").textContent = withScores
+        ? v.segments.length + " scored · live Jev"
+        : v.segments.length + " shots · indexed (ingest stub)";
+    }
+
+    function indexVideo() {
+      indexed = true; scored = false; decisions = [];
+      document.getElementById("assembled").classList.remove("show");
+      document.getElementById("dlCapcut").disabled = true;
+      document.getElementById("dlEdl").disabled = true;
+      showErr("");
+      renderStrip(false);
+      updateMeters();
+      setPipe(1);
+      refreshKeyUI();
+    }
+
+    async function runJev() {
+      if (!indexed || !JEV.getKey()) return;
+      showErr("");
+      const btn = document.getElementById("runJev");
+      const indexBtn = document.getElementById("indexBtn");
+      btn.disabled = true; indexBtn.disabled = true;
+      abortCtrl = new AbortController();
+      const v = currentVideo();
+      decisions = new Array(v.segments.length).fill(null);
+      renderStrip(false);
+      setPipe(2);
+      document.getElementById("stageStatus").textContent = "live Jev scoring…";
+
+      try {
+        for (let i = 0; i < v.segments.length; i++) {
+          const el = document.getElementById("seg-" + i);
+          el.classList.add("scoring");
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          const result = await JEV.scoreSegment(v, v.segments[i], { signal: abortCtrl.signal });
+          decisions[i] = result;
+          lastModel = result.model;
+          el.classList.remove("scoring", "err", "KEEP", "DROP", "HOOK", "B-ROLL", "CTA");
+          el.classList.add(result.decision);
+          const dec = document.getElementById("dec-" + i);
+          dec.textContent = result.decision;
+          dec.className = "dec-label show " + result.decision;
+          document.getElementById("conf-" + i).classList.add("show");
+          document.getElementById("fill-" + i).style.width = Math.round(result.conf * 100) + "%";
+          const pr = document.getElementById("probs-" + i);
+          pr.textContent = fmtProbs(result.probabilities);
+          pr.classList.add("show");
+          updateMeters();
+        }
+        scored = true;
+        assemble();
+        document.getElementById("dlCapcut").disabled = false;
+        document.getElementById("dlEdl").disabled = false;
+        setPipe(4);
+        document.getElementById("stageStatus").textContent = "cut assembled · export ready · " + lastModel;
+      } catch (e) {
+        if (e && e.name === "AbortError") {
+          showErr("Scoring aborted.");
+        } else {
+          showErr(String(e && e.message || e));
+          document.getElementById("stageStatus").textContent = "Jev error — see panel";
+        }
+      } finally {
+        abortCtrl = null;
+        indexBtn.disabled = false;
+        refreshKeyUI();
+      }
+    }
+
+    function assemble() {
+      const v = currentVideo();
+      const order = ["Hook", "Problem", "Demo", "Payoff", "CTA"];
+      const buckets = { Hook: [], Problem: [], Demo: [], Payoff: [], CTA: [] };
+      const accent = { Hook: "var(--purple)", Problem: "var(--amber)", Demo: "var(--cyan)", Payoff: "var(--green)", CTA: "var(--pink)" };
+      v.segments.forEach((s, i) => {
+        const d = decisions[i];
+        if (!d) return;
+        const beat = beatFor(s, d.decision);
+        if (!beat) return;
+        buckets[beat].push({ t: s.t, decision: d.decision, conf: d.conf, asr: s.asr });
+      });
+      document.getElementById("beats").innerHTML = order.map((name) => {
+        const clips = buckets[name];
+        const body = clips.length === 0
+          ? `<div class="clip" style="opacity:.45;border-left-color:${accent[name]}">—</div>`
+          : clips.map((c) =>
+              `<div class="clip" style="border-left-color:${accent[name]}">${escapeHtml(c.t)} · ${c.decision} ${(c.conf * 100).toFixed(0)}%</div>`
+            ).join("");
+        return `<div class="beat"><div class="bname">${name}</div><div class="clips">${body}</div></div>`;
+      }).join("");
+      const kept = order.flatMap((n) => buckets[n]);
+      const totalW = kept.reduce((a, c) => a + Math.max(0.15, c.conf), 0) || 1;
+      document.getElementById("timeline").innerHTML = kept.map((c) => {
+        const w = (Math.max(0.15, c.conf) / totalW) * 100;
+        const color = c.decision === "HOOK" ? "var(--purple)" : c.decision === "CTA" ? "var(--pink)" : c.decision === "B-ROLL" ? "var(--cyan)" : "var(--green)";
+        return `<div class="tl-block" style="width:${w}%;background:${color}" title="${escapeHtml(c.t)}">${escapeHtml(c.decision)}</div>`;
+      }).join("");
+      document.getElementById("assembled").classList.add("show");
+      setPipe(3);
+    }
+
+    function parseRange(t) {
+      const parts = t.split("–");
+      function toTC(mmss) {
+        const [m, s] = mmss.split(":").map(Number);
+        const sec = m * 60 + s;
+        const hh = String(Math.floor(sec / 3600)).padStart(2, "0");
+        const mm = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
+        const ss = String(sec % 60).padStart(2, "0");
+        return { tc: hh + ":" + mm + ":" + ss + ":00", sec };
+      }
+      const a = toTC(parts[0]); const b = toTC(parts[1]);
+      return { inTC: a.tc, outTC: b.tc, inSec: a.sec, outSec: b.sec };
+    }
+
+    function buildPackage() {
+      const v = currentVideo();
+      const order = ["Hook", "Problem", "Demo", "Payoff", "CTA"];
+      const clips = [];
+      v.segments.forEach((s, i) => {
+        const d = decisions[i];
+        if (!d || d.decision === "DROP") return;
+        const beat = beatFor(s, d.decision);
+        if (!beat) return;
+        const r = parseRange(s.t);
+        clips.push({
+          sourceId: v.id, sourceTitle: v.title, beat,
+          decision: d.decision, confidence: Math.round(d.conf * 1000) / 1000,
+          probabilities: d.probabilities || {},
+          in: r.inTC, out: r.outTC, inSec: r.inSec, outSec: r.outSec,
+          asrSnippet: s.asr, tags: s.tags, jevModel: d.model || lastModel,
+        });
+      });
+      clips.sort((a, b) => order.indexOf(a.beat) - order.indexOf(b.beat) || a.inSec - b.inSec);
+      return {
+        schema: "curiosity.jev-video-cut/v1",
+        generatedAt: new Date().toISOString(),
+        note: "Cut package from live TypeSafe Jev Choice scores over indexed (stub) segments.",
+        thesis: "Index cheaply → TypeSafe Jev typed decisions → assemble → CapCut/Premiere import",
+        jev: { baseUrl: JEV.getBase(), model: lastModel },
+        source: { id: v.id, title: v.title, duration: v.duration, durationSec: v.durationSec },
+        storyBeats: order,
+        sequence: clips,
+        pluginSketch: {
+          capcut: "Import markers + suggested draft timeline via CapCut OpenAPI / draft JSON",
+          premiere: "Import as markers or CMX3600 EDL; UXP panel could apply labels from confidence",
+        },
+      };
+    }
+
+    function download(filename, text, mime) {
+      const blob = new Blob([text], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadCapcut() {
+      const pkg = buildPackage();
+      const capcutish = {
+        ...pkg, format: "capcut-draft-markers",
+        draft: {
+          name: "Jev Cut · " + pkg.source.title,
+          tracks: [{
+            type: "video",
+            clips: pkg.sequence.map((c, i) => ({
+              id: "clip_" + i, source: c.sourceId,
+              start_ms: c.inSec * 1000, end_ms: c.outSec * 1000,
+              label: c.beat + "/" + c.decision, confidence: c.confidence,
+            })),
+          }],
+        },
+      };
+      download(pkg.source.id + "-capcut.json", JSON.stringify(capcutish, null, 2), "application/json");
+      setPipe(4);
+    }
+
+    function downloadEdl() {
+      const pkg = buildPackage();
+      const lines = ["TITLE: Jev Cut - " + pkg.source.title, "FCM: NON-DROP FRAME",
+        "* Live Jev EDL · curiosity-demos/jev-video-cut · model " + (pkg.jev.model || ""), "",];
+      let ev = 1, recIn = 0;
+      function secToEdl(sec) {
+        const hh = String(Math.floor(sec / 3600)).padStart(2, "0");
+        const mm = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
+        const ss = String(sec % 60).padStart(2, "0");
+        return hh + ":" + mm + ":" + ss + ":00";
+      }
+      pkg.sequence.forEach((c) => {
+        const dur = Math.max(1, c.outSec - c.inSec);
+        const recOut = recIn + dur;
+        const n = String(ev).padStart(3, "0");
+        lines.push(n + "  AX       V     C        " + c.in + " " + c.out + " " + secToEdl(recIn) + " " + secToEdl(recOut));
+        lines.push("* FROM CLIP NAME: " + c.sourceTitle);
+        lines.push("* MARKER: " + c.beat + " | " + c.decision + " conf=" + c.confidence + " | " + c.asrSnippet);
+        lines.push("");
+        ev++; recIn = recOut;
+      });
+      download(pkg.source.id + "-premiere.edl", lines.join("\n"), "text/plain");
+      setPipe(4);
+    }
+
+    function resetAll() {
+      if (abortCtrl) abortCtrl.abort();
+      indexed = false; scored = false; decisions = []; lastModel = "—";
+      document.getElementById("dlCapcut").disabled = true;
+      document.getElementById("dlEdl").disabled = true;
+      document.getElementById("assembled").classList.remove("show");
+      showErr(""); showEmpty(); updateMeters(); setPipe(0); refreshKeyUI();
+    }
+
+    async function saveAndTest() {
+      const base = document.getElementById("cfgBase").value.trim() || JEV.DEFAULT_BASE;
+      const key = document.getElementById("cfgKey").value.trim();
+      JEV.setConfig(base, key || JEV.getKey());
+      refreshKeyUI();
+      showErr("");
+      if (!JEV.getKey()) { showErr("Paste a TYPESAFE_API_KEY to enable live scoring."); return; }
+      document.getElementById("cfgStatus").textContent = "Testing " + JEV.getBase() + " …";
+      try {
+        const probe = await JEV.scoreSegment(
+          { id: "probe", title: "probe", kind: "test", duration: "0:01" },
+          { t: "00:00–00:01", asr: "Probe ping for API connectivity.", tags: ["probe"] }
+        );
+        lastModel = probe.model;
+        document.getElementById("cfgStatus").textContent =
+          "OK · model " + probe.model + " · sample " + probe.decision + " conf=" + probe.conf.toFixed(2);
+        updateMeters();
+        refreshKeyUI();
+      } catch (e) {
+        showErr(String(e && e.message || e));
+        document.getElementById("cfgStatus").textContent = "Test failed — see error";
+      }
+    }
+
+    document.getElementById("indexBtn").addEventListener("click", indexVideo);
+    document.getElementById("runJev").addEventListener("click", runJev);
+    document.getElementById("reset").addEventListener("click", resetAll);
+    document.getElementById("dlCapcut").addEventListener("click", downloadCapcut);
+    document.getElementById("dlEdl").addEventListener("click", downloadEdl);
+    document.getElementById("cfgSave").addEventListener("click", saveAndTest);
+
+    renderLibrary();
+    updateMeters();
+    setPipe(0);
+    refreshKeyUI();
+  </script>
+</body>
+</html>
