@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Password Vault Approval — Curiosity demos</title>
+  <style>
+    :root { 
+      color-scheme: dark; 
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      --bg: #0a0c0f;
+      --card: #151a21;
+      --border: #2a3038;
+      --accent: #3d7eff;
+      --text: #e8eaed;
+      --text-dim: rgba(232, 234, 237, 0.65);
+      --success: #34d399;
+      --danger: #ef4444;
+      --vault-primary: #0066f5;
+      --vault-secondary: #0052cc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; padding: 1.5rem;
+    }
+    .container { max-width: 800px; width: 100%; margin: 0 auto; }
+    .header {
+      margin-bottom: 2rem;
+    }
+    h1 { 
+      font-size: 1.75rem; font-weight: 700; margin: 0 0 0.5rem; 
+      letter-spacing: -0.02em;
+    }
+    .subtitle { 
+      color: var(--text-dim); font-size: 0.95rem; line-height: 1.5; margin: 0;
+    }
+    .back-link {
+      display: inline-block; margin-bottom: 1rem; color: var(--accent);
+      text-decoration: none; font-size: 0.9rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+    
+    .vault-section {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.75rem; margin-bottom: 2rem;
+    }
+    .section-title {
+      font-weight: 600; font-size: 1.1rem; margin: 0 0 1.25rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .vault-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.25rem 0.65rem; background: linear-gradient(135deg, var(--vault-primary), var(--vault-secondary));
+      border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: white;
+    }
+    
+    .vault-items {
+      display: grid; gap: 0.85rem;
+    }
+    .vault-item {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1rem 1.25rem; background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border); border-radius: 10px;
+      transition: all 0.2s; cursor: pointer;
+    }
+    .vault-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(61, 126, 255, 0.4);
+    }
+    .vault-icon {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: linear-gradient(135deg, rgba(0, 102, 245, 0.2), rgba(0, 82, 204, 0.2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; flex-shrink: 0;
+    }
+    .vault-item-content { flex: 1; min-width: 0; }
+    .vault-item-name {
+      font-weight: 600; font-size: 0.95rem; margin: 0 0 0.2rem;
+    }
+    .vault-item-detail {
+      color: var(--text-dim); font-size: 0.8rem; margin: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .use-btn {
+      padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--vault-primary);
+      color: var(--vault-primary); border-radius: 7px; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .use-btn:hover {
+      background: var(--vault-primary); color: white;
+    }
+    
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px); display: none; align-items: center;
+      justify-content: center; z-index: 1000; padding: 1.5rem;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 2rem; max-width: 500px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .modal-header {
+      display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+    .modal-icon {
+      width: 48px; height: 48px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--vault-primary), var(--vault-secondary));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+    }
+    .modal-title {
+      font-weight: 700; font-size: 1.25rem; margin: 0;
+    }
+    .modal-body {
+      margin-bottom: 1.75rem;
+    }
+    .field-group {
+      margin-bottom: 1.25rem;
+    }
+    .field-label {
+      font-size: 0.85rem; font-weight: 600; color: var(--text-dim);
+      margin-bottom: 0.5rem; display: block;
+    }
+    .field-value {
+      padding: 0.85rem 1rem; background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+      font-size: 0.9rem; letter-spacing: 0.5px; color: var(--text);
+    }
+    .redacted {
+      letter-spacing: 2px; color: var(--text-dim);
+    }
+    .warning-box {
+      padding: 1rem; background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px;
+      font-size: 0.85rem; line-height: 1.5; margin-bottom: 1.5rem;
+    }
+    .warning-box strong { color: var(--danger); }
+    
+    .modal-actions {
+      display: flex; gap: 0.75rem;
+    }
+    .modal-btn {
+      flex: 1; padding: 0.85rem; border: none; border-radius: 8px;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .modal-btn-approve {
+      background: var(--success); color: white;
+    }
+    .modal-btn-approve:hover {
+      background: #2bb383;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
+    }
+    .modal-btn-deny {
+      background: transparent; color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+    .modal-btn-deny:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .transcript-section {
+      background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem; margin-bottom: 2rem;
+    }
+    .transcript-title {
+      font-weight: 600; font-size: 1rem; margin: 0 0 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .chat-message {
+      display: flex; gap: 0.75rem; margin-bottom: 1rem; padding: 0.85rem;
+      background: rgba(255, 255, 255, 0.03); border-radius: 8px;
+    }
+    .chat-avatar {
+      width: 32px; height: 32px; border-radius: 6px;
+      background: var(--accent); display: flex; align-items: center;
+      justify-content: center; font-weight: 600; font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+    .chat-content {
+      flex: 1; min-width: 0;
+    }
+    .chat-author {
+      font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;
+    }
+    .chat-text {
+      color: var(--text-dim); font-size: 0.85rem; line-height: 1.4; margin: 0;
+    }
+    .secret-badge {
+      display: inline-block; padding: 0.15rem 0.5rem;
+      background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.3);
+      border-radius: 4px; font-size: 0.75rem; font-weight: 600;
+      color: var(--success); margin-left: 0.25rem;
+    }
+    
+    .info-box {
+      padding: 1.25rem; background: rgba(61, 126, 255, 0.1);
+      border: 1px solid rgba(61, 126, 255, 0.3); border-radius: 10px;
+      font-size: 0.85rem; line-height: 1.6; color: var(--text-dim);
+    }
+    .info-box strong { color: var(--text); }
+    
+    @media (max-width: 640px) {
+      .vault-item { flex-direction: column; align-items: stretch; }
+      .use-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="../" class="back-link">← All demos</a>
+      <h1>Password Vault Approval</h1>
+      <p class="subtitle">
+        Interactive mock: agent requests vault item → user approves each autofill → 
+        secrets stay in password manager, never exposed in chat.
+      </p>
+    </div>
+    
+    <div class="vault-section">
+      <h2 class="section-title">
+        Shared Vault Items
+        <span class="vault-badge">🔐 Password vault</span>
+      </h2>
+      <div class="vault-items">
+        <div class="vault-item" data-item="aws">
+          <div class="vault-icon">☁️</div>
+          <div class="vault-item-content">
+            <div class="vault-item-name">AWS Console Login</div>
+            <p class="vault-item-detail">team-admin@company.com • Last used 2 days ago</p>
+          </div>
+          <button class="use-btn">Use for Agent</button>
+        </div>
+        
+        <div class="vault-item" data-item="github">
+          <div class="vault-icon">🔧</div>
+          <div class="vault-item-content">
+            <div class="vault-item-name">GitHub Personal Token</div>
+            <p class="vault-item-detail">Full repo access • Expires in 47 days</p>
+          </div>
+          <button class="use-btn">Use for Agent</button>
+        </div>
+        
+        <div class="vault-item" data-item="stripe">
+          <div class="vault-icon">💳</div>
+          <div class="vault-item-content">
+            <div class="vault-item-name">Stripe API Key (Production)</div>
+            <p class="vault-item-detail">sk_live_••••••••hJ7K • Full payment access</p>
+          </div>
+          <button class="use-btn">Use for Agent</button>
+        </div>
+        
+        <div class="vault-item" data-item="database">
+          <div class="vault-icon">🗄️</div>
+          <div class="vault-item-content">
+            <div class="vault-item-name">Production Database</div>
+            <p class="vault-item-detail">PostgreSQL prod-cluster.us-west-2.rds</p>
+          </div>
+          <button class="use-btn">Use for Agent</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="transcript-section">
+      <h3 class="transcript-title">
+        💬 Agent Chat Transcript
+      </h3>
+      <div id="chatLog">
+        <div class="chat-message">
+          <div class="chat-avatar">U</div>
+          <div class="chat-content">
+            <div class="chat-author">You</div>
+            <p class="chat-text">Deploy the latest build to production</p>
+          </div>
+        </div>
+        <div class="chat-message">
+          <div class="chat-avatar" style="background: var(--vault-primary);">A</div>
+          <div class="chat-content">
+            <div class="chat-author">Agent</div>
+            <p class="chat-text">I'll deploy to production. This requires AWS Console Login credentials. 
+            Requesting vault access...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-box">
+      <strong>Pattern inspired by:</strong> 
+      <a href="https://x.ai/bot" target="_blank" rel="noopener" style="color: var(--accent);">Grok Bot</a> 
+      announcement about 1Password integration (approval workflow).
+      <br><br>
+      <strong>Key security feature:</strong> Agent can request vault items and user approves each autofill. 
+      The actual secret (password, API key, token) never appears in the agent's chat transcript — 
+      only redacted placeholders like "••••" or "filled by vault" are logged.
+      <br><br>
+      <strong>Educational mock:</strong> This is a UI demonstration of the approval pattern. 
+      No real secrets, no actual vault integration. Inspired by 1Password × Grok Bot workflow.
+    </div>
+  </div>
+  
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="approvalModal">
+      <div class="modal-header">
+        <div class="modal-icon" id="modalIcon">🔐</div>
+        <h3 class="modal-title" id="modalTitle">Approve Autofill?</h3>
+      </div>
+      <div class="modal-body">
+        <div class="warning-box">
+          <strong>⚠️ Agent requesting access</strong><br>
+          The agent needs this credential to proceed. Review the details below before approving.
+        </div>
+        
+        <div class="field-group">
+          <label class="field-label">Item Name</label>
+          <div class="field-value" id="modalItemName">—</div>
+        </div>
+        
+        <div class="field-group">
+          <label class="field-label">Username / Account</label>
+          <div class="field-value" id="modalUsername">—</div>
+        </div>
+        
+        <div class="field-group">
+          <label class="field-label">Password / Secret</label>
+          <div class="field-value redacted" id="modalPassword">••••••••••••</div>
+        </div>
+        
+        <div class="field-group">
+          <label class="field-label">Will be used for</label>
+          <div class="field-value" id="modalPurpose">—</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-deny" id="denyBtn">Deny</button>
+        <button class="modal-btn modal-btn-approve" id="approveBtn">✓ Approve Fill</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalIcon = document.getElementById('modalIcon');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalItemName = document.getElementById('modalItemName');
+    const modalUsername = document.getElementById('modalUsername');
+    const modalPassword = document.getElementById('modalPassword');
+    const modalPurpose = document.getElementById('modalPurpose');
+    const approveBtn = document.getElementById('approveBtn');
+    const denyBtn = document.getElementById('denyBtn');
+    const chatLog = document.getElementById('chatLog');
+    
+    const itemData = {
+      aws: {
+        name: 'AWS Console Login',
+        username: 'team-admin@company.com',
+        icon: '☁️',
+        purpose: 'Deploy application to production EC2 instances'
+      },
+      github: {
+        name: 'GitHub Personal Token',
+        username: 'ghp_••••••••••••••••••vX8K',
+        icon: '🔧',
+        purpose: 'Clone private repository and push deployment tags'
+      },
+      stripe: {
+        name: 'Stripe API Key (Production)',
+        username: 'sk_live_••••••••hJ7K',
+        icon: '💳',
+        purpose: 'Verify payment webhooks are properly configured'
+      },
+      database: {
+        name: 'Production Database',
+        username: 'prod_admin',
+        icon: '🗄️',
+        purpose: 'Run database migration scripts for new schema'
+      }
+    };
+    
+    let currentItem = null;
+    
+    document.querySelectorAll('.use-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const item = btn.closest('.vault-item').dataset.item;
+        showApprovalModal(item);
+      });
+    });
+    
+    document.querySelectorAll('.vault-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.classList.contains('use-btn')) return;
+        const itemId = item.dataset.item;
+        showApprovalModal(itemId);
+      });
+    });
+    
+    function showApprovalModal(item) {
+      currentItem = item;
+      const data = itemData[item];
+      
+      modalIcon.textContent = data.icon;
+      modalTitle.textContent = 'Approve Autofill?';
+      modalItemName.textContent = data.name;
+      modalUsername.textContent = data.username;
+      modalPurpose.textContent = data.purpose;
+      
+      modalOverlay.classList.add('active');
+    }
+    
+    function hideModal() {
+      modalOverlay.classList.remove('active');
+    }
+    
+    approveBtn.addEventListener('click', () => {
+      const data = itemData[currentItem];
+      
+      const agentMsg = document.createElement('div');
+      agentMsg.className = 'chat-message';
+      agentMsg.innerHTML = `
+        <div class="chat-avatar" style="background: var(--vault-primary);">A</div>
+        <div class="chat-content">
+          <div class="chat-author">Agent</div>
+          <p class="chat-text">
+            ✓ Credentials received 
+            <span class="secret-badge">filled by vault</span><br>
+            Connecting to ${data.name.split(' ')[0]}... deployment in progress.
+          </p>
+        </div>
+      `;
+      chatLog.appendChild(agentMsg);
+      
+      setTimeout(() => {
+        const successMsg = document.createElement('div');
+        successMsg.className = 'chat-message';
+        successMsg.innerHTML = `
+          <div class="chat-avatar" style="background: var(--success);">A</div>
+          <div class="chat-content">
+            <div class="chat-author">Agent</div>
+            <p class="chat-text">
+              ✓ Deployment complete! Production is now running v2.1.4<br>
+              <span style="font-size: 0.75rem; opacity: 0.6;">
+                Note: Credentials never appeared in this transcript
+              </span>
+            </p>
+          </div>
+        `;
+        chatLog.appendChild(successMsg);
+        chatLog.scrollTop = chatLog.scrollHeight;
+      }, 1500);
+      
+      hideModal();
+      chatLog.scrollTop = chatLog.scrollHeight;
+    });
+    
+    denyBtn.addEventListener('click', () => {
+      const agentMsg = document.createElement('div');
+      agentMsg.className = 'chat-message';
+      agentMsg.innerHTML = `
+        <div class="chat-avatar" style="background: var(--danger);">A</div>
+        <div class="chat-content">
+          <div class="chat-author">Agent</div>
+          <p class="chat-text">
+            ✗ Vault access denied. Cannot proceed with deployment without credentials.
+            Please approve the autofill request to continue.
+          </p>
+        </div>
+      `;
+      chatLog.appendChild(agentMsg);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      hideModal();
+    });
+    
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) hideModal();
+    });
+  </script>
+</body>
+</html>
