@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jev Ultrafast Architecture — Curiosity demos</title>
+  <style>
+    :root { 
+      color-scheme: dark; 
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      --bg: #0a0c0f;
+      --card: #151a21;
+      --border: #2a3038;
+      --accent: #3d7eff;
+      --text: #e8eaed;
+      --text-dim: rgba(232, 234, 237, 0.65);
+      --success: #34d399;
+      --warning: #fbbf24;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; padding: 1.5rem;
+    }
+    .container { max-width: 900px; width: 100%; margin: 0 auto; }
+    .header {
+      margin-bottom: 2rem;
+    }
+    h1 { 
+      font-size: 1.75rem; font-weight: 700; margin: 0 0 0.5rem; 
+      letter-spacing: -0.02em;
+    }
+    .subtitle { 
+      color: var(--text-dim); font-size: 0.95rem; line-height: 1.5; margin: 0;
+    }
+    .back-link {
+      display: inline-block; margin-bottom: 1rem; color: var(--accent);
+      text-decoration: none; font-size: 0.9rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+    
+    .toggle-section {
+      margin-bottom: 2rem; padding: 1.5rem; background: var(--card);
+      border: 1px solid var(--border); border-radius: 14px;
+    }
+    .toggle-label {
+      font-weight: 600; font-size: 1rem; margin-bottom: 1rem; display: block;
+    }
+    .toggle-buttons {
+      display: flex; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .toggle-btn {
+      padding: 0.65rem 1.5rem; border: 1px solid var(--border);
+      background: transparent; color: var(--text); border-radius: 8px;
+      cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+      font-family: inherit; font-weight: 500;
+    }
+    .toggle-btn:hover { border-color: var(--accent); }
+    .toggle-btn.active {
+      background: var(--accent); border-color: var(--accent); color: white;
+    }
+    
+    .demo-stage {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem; margin-bottom: 2rem;
+      min-height: 400px; position: relative;
+    }
+    
+    .step-container {
+      display: flex; flex-direction: column; gap: 1.5rem;
+    }
+    .step {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1.25rem; background: rgba(61, 126, 255, 0.08);
+      border: 1px solid rgba(61, 126, 255, 0.2);
+      border-radius: 10px; transition: all 0.3s;
+    }
+    .step.active {
+      border-color: var(--accent); background: rgba(61, 126, 255, 0.15);
+      box-shadow: 0 0 0 3px rgba(61, 126, 255, 0.1);
+    }
+    .step-num {
+      font-size: 1.5rem; font-weight: 700; color: var(--accent);
+      min-width: 2.5rem; text-align: center;
+    }
+    .step-content { flex: 1; }
+    .step-title { 
+      font-weight: 600; font-size: 1rem; margin: 0 0 0.25rem;
+    }
+    .step-desc {
+      color: var(--text-dim); font-size: 0.85rem; line-height: 1.4; margin: 0;
+    }
+    
+    .comparison-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+    }
+    @media (max-width: 640px) {
+      .comparison-grid { grid-template-columns: 1fr; }
+    }
+    .comparison-card {
+      padding: 1.5rem; background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border); border-radius: 10px;
+    }
+    .comparison-card h3 {
+      margin: 0 0 1rem; font-size: 1.05rem; font-weight: 600;
+    }
+    .comparison-card.winner {
+      border-color: var(--success);
+      background: rgba(52, 211, 153, 0.08);
+    }
+    .metric {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.6rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .metric:last-child { border-bottom: none; }
+    .metric-label { font-size: 0.85rem; color: var(--text-dim); }
+    .metric-value { 
+      font-weight: 600; font-size: 0.95rem;
+    }
+    .metric-value.good { color: var(--success); }
+    .metric-value.bad { color: var(--warning); }
+    
+    .timeline {
+      margin-top: 1.5rem; padding: 1.25rem; background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+    }
+    .timeline-header {
+      font-weight: 600; font-size: 0.9rem; margin-bottom: 1rem;
+      color: var(--text-dim);
+    }
+    .timeline-bar {
+      height: 40px; background: linear-gradient(90deg, var(--success) 0%, var(--success) 70%, var(--accent) 70%, var(--accent) 100%);
+      border-radius: 6px; position: relative; overflow: hidden;
+    }
+    .timeline-label {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      font-size: 0.75rem; font-weight: 600; padding: 0 0.75rem; color: white;
+    }
+    .timeline-label.jev { left: 0; }
+    .timeline-label.llm { right: 0; }
+    
+    .info-box {
+      margin-top: 2rem; padding: 1.25rem; background: rgba(61, 126, 255, 0.1);
+      border: 1px solid rgba(61, 126, 255, 0.3); border-radius: 10px;
+      font-size: 0.85rem; line-height: 1.6; color: var(--text-dim);
+    }
+    .info-box strong { color: var(--text); }
+    
+    .controls {
+      display: flex; justify-content: center; margin-top: 2rem;
+    }
+    .play-btn {
+      padding: 0.85rem 2.5rem; background: var(--accent);
+      border: none; color: white; border-radius: 10px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .play-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(61, 126, 255, 0.4);
+    }
+    .play-btn:active {
+      transform: translateY(0);
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .step.animating {
+      animation: pulse 1s ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="../" class="back-link">← All demos</a>
+      <h1>Jev Ultrafast Architecture</h1>
+      <p class="subtitle">
+        Educational explainer: browser agent using DOM-indexed actions instead of screenshot analysis.
+        Claimed 7s Google Flights search for ~$0.0039.
+      </p>
+    </div>
+    
+    <div class="toggle-section">
+      <span class="toggle-label">Architecture mode:</span>
+      <div class="toggle-buttons">
+        <button class="toggle-btn active" data-mode="dom">DOM-Index Agent (Jev)</button>
+        <button class="toggle-btn" data-mode="screenshot">Screenshot Agent (Traditional)</button>
+      </div>
+    </div>
+    
+    <div class="demo-stage">
+      <div class="step-container" id="stepContainer">
+        <div class="step" data-step="1">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Observe DOM State</div>
+            <div class="step-desc">Parse page structure, extract interactive elements with indices</div>
+          </div>
+        </div>
+        <div class="step" data-step="2">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Build Indexed Action List</div>
+            <div class="step-desc">Generate typed action space: click[0-47], type[field_3], scroll[section_2]</div>
+          </div>
+        </div>
+        <div class="step" data-step="3">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">Policy Picks Action Index</div>
+            <div class="step-desc">Small LLM selects action from discrete space (not vision model)</div>
+          </div>
+        </div>
+        <div class="step" data-step="4">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">Execute Action</div>
+            <div class="step-desc">Browser performs click/type/scroll directly via automation API</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="controls">
+        <button class="play-btn" id="playBtn">▶ Animate Steps</button>
+      </div>
+    </div>
+    
+    <div class="demo-stage">
+      <div class="comparison-grid" id="comparisonGrid">
+        <div class="comparison-card winner">
+          <h3>DOM-Index Agent (Jev)</h3>
+          <div class="metric">
+            <span class="metric-label">Search time</span>
+            <span class="metric-value good">~7s</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Cost per run</span>
+            <span class="metric-value good">~$0.0039</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Primary input</span>
+            <span class="metric-value">DOM structure</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">LLM usage</span>
+            <span class="metric-value good">Text only (typing)</span>
+          </div>
+        </div>
+        
+        <div class="comparison-card">
+          <h3>Screenshot Agent</h3>
+          <div class="metric">
+            <span class="metric-label">Search time</span>
+            <span class="metric-value bad">~40-60s</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Cost per run</span>
+            <span class="metric-value bad">~$0.30-0.50</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Primary input</span>
+            <span class="metric-value">Full screenshots</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">LLM usage</span>
+            <span class="metric-value bad">Vision model every step</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="timeline">
+        <div class="timeline-header">Example: Google Flights ZRH→LON cost breakdown</div>
+        <div class="timeline-bar">
+          <span class="timeline-label jev">Jev index ops: 70%</span>
+          <span class="timeline-label llm">Text LLM: 30%</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-box">
+      <strong>Source:</strong> Inspired by 
+      <a href="https://x.com/gregpr07/status/2100411066966749359" target="_blank" rel="noopener" style="color: var(--accent);">@gregpr07's post</a> 
+      about browser-use/jev-ultrafast (MIT license, Browser Use + TypeSafe Jev).
+      <br><br>
+      <strong>Educational only:</strong> This is an architecture explainer toy — not the real agent. 
+      No actual browser automation, no API keys required. The ~7s / ~$0.0039 metrics are from the original post.
+      <br><br>
+      <strong>Key innovation:</strong> DOM-indexed action space eliminates expensive vision model calls for every page state, 
+      falling back to small text LLM only for typing operations. Actions are discrete indices into the interactive element list.
+    </div>
+  </div>
+  
+  <script>
+    const toggleBtns = document.querySelectorAll('.toggle-btn');
+    const playBtn = document.getElementById('playBtn');
+    const steps = document.querySelectorAll('.step');
+    const comparisonGrid = document.getElementById('comparisonGrid');
+    
+    let currentMode = 'dom';
+    let isAnimating = false;
+    
+    toggleBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggleBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+        updateComparison();
+      });
+    });
+    
+    function updateComparison() {
+      if (currentMode === 'screenshot') {
+        comparisonGrid.innerHTML = `
+          <div class="comparison-card">
+            <h3>Screenshot Agent</h3>
+            <div class="metric">
+              <span class="metric-label">Step 1</span>
+              <span class="metric-value">Capture full page screenshot</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Step 2</span>
+              <span class="metric-value">Send to vision model (GPT-4V, Claude)</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Step 3</span>
+              <span class="metric-value">Model analyzes image, decides action</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Step 4</span>
+              <span class="metric-value">Execute action → repeat from Step 1</span>
+            </div>
+          </div>
+          <div class="comparison-card winner">
+            <h3>DOM-Index Approach (Jev)</h3>
+            <div class="metric">
+              <span class="metric-label">Step 1</span>
+              <span class="metric-value good">Parse DOM structure (fast)</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Step 2</span>
+              <span class="metric-value good">Index interactive elements</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Step 3</span>
+              <span class="metric-value good">Small LLM picks index (cheap)</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Step 4</span>
+              <span class="metric-value good">Execute → fast loop</span>
+            </div>
+          </div>
+        `;
+      } else {
+        comparisonGrid.innerHTML = `
+          <div class="comparison-card winner">
+            <h3>DOM-Index Agent (Jev)</h3>
+            <div class="metric">
+              <span class="metric-label">Search time</span>
+              <span class="metric-value good">~7s</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Cost per run</span>
+              <span class="metric-value good">~$0.0039</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Primary input</span>
+              <span class="metric-value">DOM structure</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">LLM usage</span>
+              <span class="metric-value good">Text only (typing)</span>
+            </div>
+          </div>
+          
+          <div class="comparison-card">
+            <h3>Screenshot Agent</h3>
+            <div class="metric">
+              <span class="metric-label">Search time</span>
+              <span class="metric-value bad">~40-60s</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Cost per run</span>
+              <span class="metric-value bad">~$0.30-0.50</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Primary input</span>
+              <span class="metric-value">Full screenshots</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">LLM usage</span>
+              <span class="metric-value bad">Vision model every step</span>
+            </div>
+          </div>
+        `;
+      }
+    }
+    
+    async function animateSteps() {
+      if (isAnimating) return;
+      isAnimating = true;
+      playBtn.textContent = '⏸ Animating...';
+      playBtn.disabled = true;
+      
+      for (let i = 0; i < steps.length; i++) {
+        steps.forEach(s => s.classList.remove('active', 'animating'));
+        steps[i].classList.add('active', 'animating');
+        await new Promise(resolve => setTimeout(resolve, 1200));
+      }
+      
+      setTimeout(() => {
+        steps.forEach(s => s.classList.remove('active', 'animating'));
+        playBtn.textContent = '▶ Animate Steps';
+        playBtn.disabled = false;
+        isAnimating = false;
+      }, 500);
+    }
+    
+    playBtn.addEventListener('click', animateSteps);
+    
+    animateSteps();
+  </script>
+</body>
+</html>

@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vector Categories Playground — Curiosity demos</title>
+  <style>
+    :root { 
+      color-scheme: dark; 
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      --bg: #0a0c0f;
+      --card: #151a21;
+      --border: #2a3038;
+      --accent: #3d7eff;
+      --text: #e8eaed;
+      --text-dim: rgba(232, 234, 237, 0.65);
+      --success: #34d399;
+      --purple: #a855f7;
+      --pink: #ec4899;
+      --amber: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; padding: 1.5rem;
+    }
+    .container { max-width: 1000px; width: 100%; margin: 0 auto; }
+    .header {
+      margin-bottom: 2rem;
+    }
+    h1 { 
+      font-size: 1.75rem; font-weight: 700; margin: 0 0 0.5rem; 
+      letter-spacing: -0.02em;
+    }
+    .subtitle { 
+      color: var(--text-dim); font-size: 0.95rem; line-height: 1.5; margin: 0;
+    }
+    .back-link {
+      display: inline-block; margin-bottom: 1rem; color: var(--accent);
+      text-decoration: none; font-size: 0.9rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+    
+    .categories {
+      display: flex; gap: 0.65rem; margin-bottom: 2rem; flex-wrap: wrap;
+    }
+    .category-chip {
+      padding: 0.65rem 1.25rem; border: 2px solid var(--border);
+      background: var(--card); color: var(--text); border-radius: 24px;
+      cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+      font-family: inherit; font-weight: 600;
+    }
+    .category-chip:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .category-chip.active {
+      background: var(--accent); border-color: var(--accent); color: white;
+    }
+    .category-chip.illustrations.active {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      border-color: transparent;
+    }
+    .category-chip.icons.active {
+      background: linear-gradient(135deg, var(--accent), #0ea5e9);
+      border-color: transparent;
+    }
+    .category-chip.typography.active {
+      background: linear-gradient(135deg, var(--amber), #f97316);
+      border-color: transparent;
+    }
+    .category-chip.pictograms.active {
+      background: linear-gradient(135deg, var(--success), #10b981);
+      border-color: transparent;
+    }
+    .category-chip.technical.active {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-color: transparent;
+    }
+    
+    .prompt-section {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem; margin-bottom: 2rem;
+    }
+    .prompt-input {
+      width: 100%; padding: 1rem 1.25rem; background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-size: 1rem; font-family: inherit;
+      resize: none; min-height: 80px; margin-bottom: 1rem;
+    }
+    .prompt-input:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(61, 126, 255, 0.1);
+    }
+    .generate-btn {
+      width: 100%; padding: 1rem; background: var(--accent);
+      border: none; color: white; border-radius: 10px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .generate-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(61, 126, 255, 0.4);
+    }
+    .generate-btn:disabled {
+      opacity: 0.5; cursor: not-allowed; transform: none;
+    }
+    
+    .output-section {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem; margin-bottom: 2rem;
+      min-height: 400px; display: flex; align-items: center;
+      justify-content: center;
+    }
+    .output-placeholder {
+      text-align: center; color: var(--text-dim);
+    }
+    .output-placeholder-icon {
+      font-size: 3rem; margin-bottom: 0.75rem; opacity: 0.5;
+    }
+    #svgOutput {
+      max-width: 100%; max-height: 500px;
+    }
+    
+    .controls-section {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .control-group {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.25rem;
+    }
+    .control-label {
+      font-size: 0.85rem; font-weight: 600; color: var(--text-dim);
+      margin-bottom: 0.75rem; display: block;
+    }
+    .color-input {
+      width: 100%; height: 48px; border: 1px solid var(--border);
+      border-radius: 8px; cursor: pointer; background: transparent;
+    }
+    .download-btn {
+      width: 100%; padding: 0.85rem; background: var(--success);
+      border: none; color: white; border-radius: 8px;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .download-btn:hover {
+      background: #2bb383;
+      transform: translateY(-1px);
+    }
+    .download-btn:disabled {
+      opacity: 0.5; cursor: not-allowed; transform: none;
+    }
+    
+    .info-box {
+      padding: 1.25rem; background: rgba(61, 126, 255, 0.1);
+      border: 1px solid rgba(61, 126, 255, 0.3); border-radius: 10px;
+      font-size: 0.85rem; line-height: 1.6; color: var(--text-dim);
+    }
+    .info-box strong { color: var(--text); }
+    
+    @media (max-width: 640px) {
+      .categories { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="../" class="back-link">← All demos</a>
+      <h1>Vector Categories Playground</h1>
+      <p class="subtitle">
+        Local SVG generator inspired by Quiver's category-based workflow.
+        Select a mode, describe what you want, and generate crisp editable vectors.
+      </p>
+    </div>
+    
+    <div class="categories">
+      <button class="category-chip illustrations active" data-category="illustrations">
+        🎨 Illustrations
+      </button>
+      <button class="category-chip icons" data-category="icons">
+        ⚡ Icons
+      </button>
+      <button class="category-chip typography" data-category="typography">
+        ✍️ Typography
+      </button>
+      <button class="category-chip pictograms" data-category="pictograms">
+        📊 Pictograms
+      </button>
+      <button class="category-chip technical" data-category="technical">
+        🔧 Technical Drawings
+      </button>
+    </div>
+    
+    <div class="prompt-section">
+      <textarea 
+        class="prompt-input" 
+        id="promptInput"
+        placeholder="Describe your vector graphic... (e.g., 'minimalist mountain landscape' or 'cloud upload icon')"
+      >minimalist mountain landscape</textarea>
+      <button class="generate-btn" id="generateBtn">✨ Generate SVG</button>
+    </div>
+    
+    <div class="output-section" id="outputSection">
+      <div class="output-placeholder">
+        <div class="output-placeholder-icon">🖼️</div>
+        <p>Your vector graphic will appear here</p>
+      </div>
+    </div>
+    
+    <div class="controls-section">
+      <div class="control-group">
+        <label class="control-label">Primary Color</label>
+        <input type="color" class="color-input" id="primaryColor" value="#3d7eff">
+      </div>
+      <div class="control-group">
+        <label class="control-label">Secondary Color</label>
+        <input type="color" class="color-input" id="secondaryColor" value="#a855f7">
+      </div>
+      <div class="control-group">
+        <label class="control-label">Background</label>
+        <input type="color" class="color-input" id="bgColor" value="#0a0c0f">
+      </div>
+      <div class="control-group">
+        <button class="download-btn" id="downloadBtn" disabled>
+          ⬇️ Download SVG
+        </button>
+      </div>
+    </div>
+    
+    <div class="info-box">
+      <strong>Inspired by:</strong> 
+      <a href="https://x.com/DannPetty/status/2100300118809354742" target="_blank" rel="noopener" style="color: var(--accent);">@DannPetty's post</a> 
+      about QuiverAI (text-to-SVG with category modes).
+      <br><br>
+      <strong>Local SVG sketchpad:</strong> This demo generates procedural SVG graphics client-side using 
+      template-based generators per category. Not affiliated with Quiver — educational toy only.
+      <br><br>
+      <strong>Categories:</strong> Illustrations (scenic), Icons (UI elements), Typography (letterforms), 
+      Pictograms (abstract symbols), Technical Drawings (diagrams/schematics).
+    </div>
+  </div>
+  
+  <script>
+    const categoryChips = document.querySelectorAll('.category-chip');
+    const promptInput = document.getElementById('promptInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const outputSection = document.getElementById('outputSection');
+    const primaryColor = document.getElementById('primaryColor');
+    const secondaryColor = document.getElementById('secondaryColor');
+    const bgColor = document.getElementById('bgColor');
+    const downloadBtn = document.getElementById('downloadBtn');
+    
+    let currentCategory = 'illustrations';
+    let currentSVG = null;
+    
+    categoryChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        categoryChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentCategory = chip.dataset.category;
+        updatePlaceholder();
+      });
+    });
+    
+    function updatePlaceholder() {
+      const placeholders = {
+        illustrations: 'minimalist mountain landscape',
+        icons: 'cloud upload icon',
+        typography: 'bold serif letter A',
+        pictograms: 'data flow diagram',
+        technical: 'gear mechanism schematic'
+      };
+      promptInput.placeholder = `Describe your vector graphic... (e.g., '${placeholders[currentCategory]}')`;
+    }
+    
+    generateBtn.addEventListener('click', generateSVG);
+    
+    function generateSVG() {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+      
+      generateBtn.disabled = true;
+      generateBtn.textContent = '✨ Generating...';
+      
+      setTimeout(() => {
+        let svg;
+        switch (currentCategory) {
+          case 'illustrations':
+            svg = generateIllustration(prompt);
+            break;
+          case 'icons':
+            svg = generateIcon(prompt);
+            break;
+          case 'typography':
+            svg = generateTypography(prompt);
+            break;
+          case 'pictograms':
+            svg = generatePictogram(prompt);
+            break;
+          case 'technical':
+            svg = generateTechnical(prompt);
+            break;
+        }
+        
+        outputSection.innerHTML = svg;
+        currentSVG = svg;
+        downloadBtn.disabled = false;
+        generateBtn.disabled = false;
+        generateBtn.textContent = '✨ Generate SVG';
+        
+        applyColors();
+      }, 800);
+    }
+    
+    function generateIllustration(prompt) {
+      const c1 = primaryColor.value;
+      const c2 = secondaryColor.value;
+      const bg = bgColor.value;
+      
+      return `
+        <svg id="svgOutput" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+          <rect width="800" height="600" fill="${bg}"/>
+          <g class="illustration">
+            <!-- Sky gradient -->
+            <defs>
+              <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:${c1};stop-opacity:0.3" />
+                <stop offset="100%" style="stop-color:${c2};stop-opacity:0.1" />
+              </linearGradient>
+            </defs>
+            <rect width="800" height="400" fill="url(#skyGrad)"/>
+            
+            <!-- Mountains -->
+            <path d="M 0 400 L 200 200 L 350 320 L 0 600 Z" fill="${c1}" opacity="0.6"/>
+            <path d="M 300 400 L 500 150 L 650 300 L 800 400 L 800 600 L 300 600 Z" fill="${c2}" opacity="0.7"/>
+            <path d="M 550 400 L 700 250 L 800 350 L 800 600 L 550 600 Z" fill="${c1}" opacity="0.5"/>
+            
+            <!-- Sun/Moon -->
+            <circle cx="650" cy="120" r="60" fill="${c2}" opacity="0.8"/>
+            <circle cx="635" cy="110" r="60" fill="${c1}" opacity="0.3"/>
+          </g>
+        </svg>
+      `;
+    }
+    
+    function generateIcon(prompt) {
+      const c1 = primaryColor.value;
+      const c2 = secondaryColor.value;
+      
+      if (prompt.toLowerCase().includes('cloud') || prompt.toLowerCase().includes('upload')) {
+        return `
+          <svg id="svgOutput" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:${c1}" />
+                <stop offset="100%" style="stop-color:${c2}" />
+              </linearGradient>
+            </defs>
+            <!-- Cloud -->
+            <path d="M 60 80 Q 50 60 70 55 Q 75 40 95 45 Q 110 35 120 50 Q 140 48 140 65 Q 150 70 145 85 L 60 85 Z" 
+                  fill="url(#iconGrad)" stroke="url(#iconGrad)" stroke-width="3" stroke-linejoin="round"/>
+            <!-- Upload arrow -->
+            <path d="M 100 120 L 100 90 M 85 100 L 100 85 L 115 100" 
+                  fill="none" stroke="url(#iconGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="85" y="115" width="30" height="25" rx="3" fill="url(#iconGrad)"/>
+          </svg>
+        `;
+      }
+      
+      return `
+        <svg id="svgOutput" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:${c1}" />
+              <stop offset="100%" style="stop-color:${c2}" />
+            </linearGradient>
+          </defs>
+          <circle cx="100" cy="60" r="25" fill="url(#iconGrad)"/>
+          <path d="M 100 95 L 70 140 L 80 140 L 80 170 L 120 170 L 120 140 L 130 140 Z" fill="url(#iconGrad)"/>
+          <circle cx="60" cy="130" r="15" fill="url(#iconGrad)" opacity="0.7"/>
+          <circle cx="140" cy="130" r="15" fill="url(#iconGrad)" opacity="0.7"/>
+        </svg>
+      `;
+    }
+    
+    function generateTypography(prompt) {
+      const c1 = primaryColor.value;
+      const c2 = secondaryColor.value;
+      
+      return `
+        <svg id="svgOutput" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:${c1}" />
+              <stop offset="50%" style="stop-color:${c2}" />
+              <stop offset="100%" style="stop-color:${c1}" />
+            </linearGradient>
+          </defs>
+          <text x="200" y="250" font-size="180" font-weight="900" font-family="serif" 
+                text-anchor="middle" fill="url(#textGrad)" stroke="${c1}" stroke-width="2">
+            A
+          </text>
+        </svg>
+      `;
+    }
+    
+    function generatePictogram(prompt) {
+      const c1 = primaryColor.value;
+      const c2 = secondaryColor.value;
+      
+      return `
+        <svg id="svgOutput" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="pictoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:${c1}" />
+              <stop offset="100%" style="stop-color:${c2}" />
+            </linearGradient>
+          </defs>
+          <!-- Data flow nodes -->
+          <circle cx="80" cy="150" r="40" fill="${c1}" opacity="0.8"/>
+          <circle cx="200" cy="80" r="35" fill="${c2}" opacity="0.8"/>
+          <circle cx="200" cy="220" r="35" fill="${c2}" opacity="0.8"/>
+          <circle cx="320" cy="150" r="40" fill="${c1}" opacity="0.8"/>
+          
+          <!-- Connections -->
+          <path d="M 120 150 L 165 100" stroke="url(#pictoGrad)" stroke-width="6" stroke-linecap="round"/>
+          <path d="M 120 150 L 165 200" stroke="url(#pictoGrad)" stroke-width="6" stroke-linecap="round"/>
+          <path d="M 235 80 L 280 120" stroke="url(#pictoGrad)" stroke-width="6" stroke-linecap="round"/>
+          <path d="M 235 220 L 280 180" stroke="url(#pictoGrad)" stroke-width="6" stroke-linecap="round"/>
+          
+          <!-- Arrows -->
+          <path d="M 270 125 L 280 120 L 275 130" fill="${c1}"/>
+          <path d="M 275 175 L 280 180 L 270 180" fill="${c1}"/>
+        </svg>
+      `;
+    }
+    
+    function generateTechnical(prompt) {
+      const c1 = primaryColor.value;
+      const c2 = secondaryColor.value;
+      
+      return `
+        <svg id="svgOutput" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="techGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:${c1}" />
+              <stop offset="100%" style="stop-color:${c2}" />
+            </linearGradient>
+          </defs>
+          <g stroke="url(#techGrad)" stroke-width="3" fill="none">
+            <!-- Outer gear -->
+            <circle cx="250" cy="250" r="120"/>
+            <g id="teeth">
+              ${Array.from({length: 12}, (_, i) => {
+                const angle = (i * 30) * Math.PI / 180;
+                const x1 = 250 + Math.cos(angle) * 120;
+                const y1 = 250 + Math.sin(angle) * 120;
+                const x2 = 250 + Math.cos(angle) * 140;
+                const y2 = 250 + Math.sin(angle) * 140;
+                return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+              }).join('')}
+            </g>
+            
+            <!-- Inner circle -->
+            <circle cx="250" cy="250" r="60" fill="${c1}" fill-opacity="0.2"/>
+            
+            <!-- Spokes -->
+            <line x1="250" y1="190" x2="250" y2="220"/>
+            <line x1="250" y1="280" x2="250" y2="310"/>
+            <line x1="190" y1="250" x2="220" y2="250"/>
+            <line x1="280" y1="250" x2="310" y2="250"/>
+            
+            <!-- Center hub -->
+            <circle cx="250" cy="250" r="25" fill="url(#techGrad)"/>
+            <circle cx="250" cy="250" r="10" fill="${c2}"/>
+          </g>
+          
+          <!-- Dimension lines -->
+          <g stroke="${c2}" stroke-width="1" opacity="0.5">
+            <line x1="50" y1="250" x2="100" y2="250" stroke-dasharray="4 2"/>
+            <line x1="400" y1="250" x2="450" y2="250" stroke-dasharray="4 2"/>
+            <text x="475" y="255" font-size="12" fill="${c2}">Ø240</text>
+          </g>
+        </svg>
+      `;
+    }
+    
+    function applyColors() {
+      if (currentSVG) {
+        generateSVG();
+      }
+    }
+    
+    primaryColor.addEventListener('input', applyColors);
+    secondaryColor.addEventListener('input', applyColors);
+    bgColor.addEventListener('input', applyColors);
+    
+    downloadBtn.addEventListener('click', () => {
+      const svgElement = document.getElementById('svgOutput');
+      if (!svgElement) return;
+      
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentCategory}-${Date.now()}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+    
+    generateSVG();
+  </script>
+</body>
+</html>
