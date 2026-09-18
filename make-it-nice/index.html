@@ -1,1 +1,19 @@
-file:///tmp/make-it-nice-content.html
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Make It Nice</title></head>
+<body>
+<script src="./part0.js"></script>
+<script src="./part1.js"></script>
+<script src="./part2.js"></script>
+<script src="./part3.js"></script>
+<script>
+(function(){
+  var parts = window.__MIN_PARTS || [];
+  var html = parts.join('');
+  document.open();
+  document.write(html);
+  document.close();
+})();
+</script>
+</body>
+</html>
