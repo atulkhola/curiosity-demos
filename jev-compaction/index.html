@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jev Compaction Toy · Curiosity</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #12161c;
+      --border: #252b34;
+      --text: #e8eaed;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --amber: #d29922;
+      --cyan: #58a6ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column;
+    }
+    header {
+      padding: 1.5rem 1.25rem 1rem;
+      max-width: 1100px; width: 100%; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;
+      justify-content: space-between;
+    }
+    h1 { font-size: 1.25rem; font-weight: 650; margin: 0 0 0.3rem; letter-spacing: -0.01em; }
+    .sub { margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.4; max-width: 48ch; }
+    .actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    button {
+      font-family: inherit; cursor: pointer; border-radius: 10px;
+      padding: 0.7rem 1.1rem; font-weight: 600; font-size: 0.85rem;
+      border: 1px solid var(--border); background: #1a222c; color: var(--text);
+    }
+    button.primary {
+      background: var(--cyan); color: #0b0d10; border-color: transparent;
+    }
+    button.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    button:hover:not(:disabled) { filter: brightness(1.08); }
+    .meters {
+      max-width: 1100px; width: 100%; margin: 0 auto;
+      padding: 0 1.25rem 1rem;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+    }
+    @media (max-width: 640px) { .meters { grid-template-columns: 1fr; } }
+    .meter {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 0.85rem 1rem;
+    }
+    .meter .label {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin-bottom: 0.35rem;
+    }
+    .meter .val {
+      font-family: var(--mono); font-size: 1.35rem; font-weight: 650;
+    }
+    .meter .bar {
+      margin-top: 0.55rem; height: 8px; border-radius: 999px;
+      background: #1c2128; overflow: hidden;
+    }
+    .meter .fill {
+      height: 100%; border-radius: 999px; transition: width 0.6s ease;
+      background: linear-gradient(90deg, #3d7eff, #58a6ff);
+    }
+    .meter.after .fill { background: linear-gradient(90deg, var(--green), #56d364); }
+    main {
+      flex: 1; max-width: 1100px; width: 100%; margin: 0 auto;
+      padding: 0 1.25rem 1.5rem;
+      display: grid; grid-template-columns: 1fr 280px; gap: 1rem;
+    }
+    @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+    .term {
+      background: #0d1117; border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden; min-height: 480px;
+      display: flex; flex-direction: column;
+    }
+    .term-bar {
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border);
+      background: #161b22; font-size: 0.72rem; color: var(--muted);
+      font-family: var(--mono);
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .dot.r { background: #ff5f56; }
+    .dot.y { background: #ffbd2e; }
+    .dot.g { background: #27c93f; }
+    .term-body {
+      flex: 1; overflow: auto; padding: 0.75rem; font-family: var(--mono);
+      font-size: 0.78rem; line-height: 1.45;
+    }
+    .call {
+      border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 0.55rem; background: #12161c;
+      overflow: hidden; transition: opacity 0.35s, max-height 0.45s, border-color 0.3s;
+      max-height: 420px;
+    }
+    .call.drop {
+      opacity: 0.35; max-height: 42px; border-color: rgba(248,81,73,0.45);
+      background: rgba(248,81,73,0.06);
+    }
+    .call.keep { border-color: rgba(63,185,80,0.5); box-shadow: inset 3px 0 0 var(--green); }
+    .call.truncate { border-color: rgba(210,153,34,0.55); box-shadow: inset 3px 0 0 var(--amber); }
+    .call-head {
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+      padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border);
+      background: #161b22;
+    }
+    .tool {
+      font-weight: 700; color: var(--cyan); font-size: 0.75rem;
+    }
+    .tokens {
+      margin-left: auto; color: var(--muted); font-size: 0.68rem;
+    }
+    .tag {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em;
+      padding: 0.15rem 0.4rem; border-radius: 4px;
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .tag.show { opacity: 1; }
+    .tag.keep { background: rgba(63,185,80,0.2); color: var(--green); }
+    .tag.drop { background: rgba(248,81,73,0.2); color: var(--red); }
+    .tag.truncate { background: rgba(210,153,34,0.2); color: var(--amber); }
+    .call-body {
+      padding: 0.55rem 0.7rem; color: #c9d1d9; white-space: pre-wrap;
+      word-break: break-word; max-height: 160px; overflow: hidden;
+    }
+    .call.drop .call-body { display: none; }
+    .call.truncate .call-body .tail { display: none; }
+    .trunc-note {
+      display: none; padding: 0.35rem 0.7rem 0.55rem;
+      color: var(--amber); font-size: 0.68rem;
+    }
+    .call.truncate .trunc-note { display: block; }
+    .side {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1rem 1.05rem; height: fit-content;
+    }
+    .side h2 {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin: 0 0 0.65rem;
+    }
+    .side p {
+      margin: 0 0 0.85rem; font-size: 0.82rem; color: #c9d1d9; line-height: 1.5;
+    }
+    .side a { color: var(--cyan); }
+    .legend { display: grid; gap: 0.4rem; font-size: 0.75rem; color: var(--muted); }
+    .legend span { display: flex; align-items: center; gap: 0.4rem; }
+    .sw { width: 10px; height: 10px; border-radius: 2px; }
+    footer {
+      max-width: 1100px; width: 100%; margin: 0 auto;
+      padding: 0 1.25rem 2rem;
+      font-size: 0.75rem; color: var(--muted); line-height: 1.45;
+    }
+    .score-flash {
+      animation: flash 0.4s ease;
+    }
+    @keyframes flash {
+      from { background: rgba(88,166,255,0.15); }
+      to { background: transparent; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Fast Jev compaction</h1>
+      <p class="sub">KEEP / DROP / TRUNCATE toy over a canned agent transcript. Deterministic seeded scores — no live Jev.</p>
+    </div>
+    <div class="actions">
+      <button id="reset" type="button">Reset</button>
+      <button class="primary" id="run" type="button">Run compaction</button>
+    </div>
+  </header>
+
+  <div class="meters">
+    <div class="meter">
+      <div class="label">Context before</div>
+      <div class="val" id="before">156.2k</div>
+      <div class="bar"><div class="fill" id="beforeFill" style="width:92%"></div></div>
+    </div>
+    <div class="meter after">
+      <div class="label">Context after</div>
+      <div class="val" id="after">—</div>
+      <div class="bar"><div class="fill" id="afterFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <main>
+    <section class="term">
+      <div class="term-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span style="margin-left:0.5rem">agent-session · tool_use stream</span>
+      </div>
+      <div class="term-body" id="stream"></div>
+    </section>
+    <aside class="side">
+      <h2>How it works</h2>
+      <p>Real <strong>fast-jev-compaction</strong> asks Jev <code>keepCall</code> / <code>keepResult</code> on every <code>tool_use</code>; text stays verbatim; only tool noise is pruned.</p>
+      <p>This demo dramatizes the SwiftUI-style pass: score each call, collapse DROPs, keep KEEPs green, TRUNCATE heads.</p>
+      <p><a href="https://github.com/tamaratran/fast-jev-compaction" target="_blank" rel="noopener">github.com/tamaratran/fast-jev-compaction</a></p>
+      <h2>Legend</h2>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--green)"></i> KEEP — needed for next steps</span>
+        <span><i class="sw" style="background:var(--red)"></i> DROP — redundant / noise</span>
+        <span><i class="sw" style="background:var(--amber)"></i> TRUNCATE — keep head only</span>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    Curiosity first-pass · dramatized like their SwiftUI demo · no live Jev
+  </footer>
+
+  <script>
+    // Deterministic seeded PRNG (mulberry32)
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    const CALLS = [
+      {
+        tool: "Bash",
+        tokens: 420,
+        resultTokens: 1800,
+        body: "$ ls -la src/\ntotal 48\ndrwxr-xr-x  8 agent agent  256 Sep 18 09:12 .\ndrwxr-xr-x 14 agent agent  448 Sep 18 09:10 ..\n-rw-r--r--  1 agent agent 2144 Sep 18 09:11 App.swift\n-rw-r--r--  1 agent agent 8901 Sep 18 09:11 Compactor.swift\n-rw-r--r--  1 agent agent 1204 Sep 18 09:11 Models.swift",
+        prefer: "drop",
+      },
+      {
+        tool: "Read",
+        tokens: 85,
+        resultTokens: 4200,
+        body: "path: Compactor.swift\n---\nimport Foundation\n\nstruct CompactionPass {\n  var keepCall: (ToolUse) -> Bool\n  var keepResult: (ToolResult) -> Bool\n}\n\nfunc compact(_ transcript: [Event], with pass: CompactionPass) -> [Event] {\n  // keep assistant/user text verbatim\n  // prune tool noise via Jev decisions\n  ...\n}",
+        prefer: "keep",
+      },
+      {
+        tool: "Grep",
+        tokens: 60,
+        resultTokens: 950,
+        body: "pattern: keepCall|keepResult\npath: .\n---\nCompactor.swift:12:  var keepCall: (ToolUse) -> Bool\nCompactor.swift:13:  var keepResult: (ToolResult) -> Bool\nTests/CompactorTests.swift:44: XCTAssertTrue(pass.keepCall(call))",
+        prefer: "truncate",
+      },
+      {
+        tool: "Bash",
+        tokens: 310,
+        resultTokens: 6200,
+        body: "$ swift test 2>&1 | head -n 80\nTest Suite 'All tests' started at...\nTest Suite 'CompactorTests' started...\nTest Case '-[CompactorTests testKeepText]' passed (0.012s)\n... 74 more lines of compiler chatter ...\nBUILD SUCCEEDED",
+        prefer: "drop",
+      },
+      {
+        tool: "Read",
+        tokens: 70,
+        resultTokens: 2800,
+        body: "path: README.md\n---\n# fast-jev-compaction\n\nAsk Jev keepCall/keepResult on every tool_use.\nText stays verbatim; only tool noise is pruned.\n\n## Install\n...\n## Demo\nSwiftUI terminal showing KEEP/DROP/TRUNCATE.",
+        prefer: "keep",
+      },
+      {
+        tool: "Bash",
+        tokens: 90,
+        resultTokens: 1400,
+        body: "$ find . -name '*.swift' | wc -l\n12\n$ du -sh .\n1.4M\t.",
+        prefer: "drop",
+      },
+      {
+        tool: "Grep",
+        tokens: 55,
+        resultTokens: 2100,
+        body: "pattern: TODO|FIXME\n---\nViews/TerminalView.swift:88: // TODO: animate collapse\nModels.swift:21: // FIXME: token estimate heuristic\n... 18 more matches across logs ...",
+        prefer: "truncate",
+      },
+      {
+        tool: "Read",
+        tokens: 95,
+        resultTokens: 5100,
+        body: "path: Views/TerminalView.swift\n---\nstruct TerminalView: View {\n  @State var decisions: [UUID: Decision] = [:]\n  var body: some View {\n    ScrollView {\n      ForEach(calls) { call in\n        CallRow(call: call, decision: decisions[call.id])\n      }\n    }\n  }\n}",
+        prefer: "keep",
+      },
+      {
+        tool: "Bash",
+        tokens: 200,
+        resultTokens: 8800,
+        body: "$ cat /tmp/build.log\n[1/42] Compiling...\n(noise) (noise) (noise)\n... thousands of incremental build lines ...\nLinking CompactorDemo",
+        prefer: "drop",
+      },
+      {
+        tool: "Read",
+        tokens: 50,
+        resultTokens: 1600,
+        body: "path: Package.swift\n---\n// swift-tools-version: 5.9\nimport PackageDescription\nlet package = Package(\n  name: \"FastJevCompaction\",\n  platforms: [.macOS(.v14)],\n  products: [.library(name: \"FastJevCompaction\", targets: [\"FastJevCompaction\"])],\n  targets: [.target(name: \"FastJevCompaction\")]\n)",
+        prefer: "keep",
+      },
+    ];
+
+    const BEFORE = 156200;
+
+    function decide(call, rng) {
+      // Deterministic bias from prefer + seeded noise
+      const r = rng();
+      if (call.prefer === "keep") return r < 0.85 ? "keep" : (r < 0.95 ? "truncate" : "drop");
+      if (call.prefer === "drop") return r < 0.75 ? "drop" : (r < 0.9 ? "truncate" : "keep");
+      // truncate preferred
+      return r < 0.7 ? "truncate" : (r < 0.88 ? "keep" : "drop");
+    }
+
+    function savings(call, decision) {
+      const total = call.tokens + call.resultTokens;
+      if (decision === "drop") return Math.floor(total * 0.97);
+      if (decision === "truncate") return Math.floor(call.resultTokens * 0.72);
+      return Math.floor(total * 0.02); // tiny keep overhead trim
+    }
+
+    function splitBody(text) {
+      const headLen = Math.min(120, Math.floor(text.length * 0.28));
+      return { head: text.slice(0, headLen), tail: text.slice(headLen) };
+    }
+
+    function render() {
+      const stream = document.getElementById("stream");
+      stream.innerHTML = CALLS.map((c, i) => {
+        const parts = splitBody(c.body);
+        const total = c.tokens + c.resultTokens;
+        return `
+          <div class="call" id="call-${i}" data-i="${i}">
+            <div class="call-head">
+              <span class="tool">${c.tool}</span>
+              <span class="tag" id="tag-${i}"></span>
+              <span class="tokens">${total.toLocaleString()} tok</span>
+            </div>
+            <div class="call-body"><span class="head">${escapeHtml(parts.head)}</span><span class="tail">${escapeHtml(parts.tail)}</span></div>
+            <div class="trunc-note" id="note-${i}">… truncated · kept head ${parts.head.length} chars · dropped ${parts.tail.length} chars of tool noise</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+    }
+
+    function resetUI() {
+      document.getElementById("after").textContent = "—";
+      document.getElementById("afterFill").style.width = "0%";
+      document.getElementById("run").disabled = false;
+      render();
+    }
+
+    async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function runCompaction() {
+      const btn = document.getElementById("run");
+      btn.disabled = true;
+      resetUI();
+      btn.disabled = true;
+
+      const rng = mulberry32(0x4A3B19); // fixed seed
+      let removed = 0;
+
+      for (let i = 0; i < CALLS.length; i++) {
+        const el = document.getElementById(`call-${i}`);
+        const tag = document.getElementById(`tag-${i}`);
+        el.classList.add("score-flash");
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        await sleep(280);
+
+        const decision = decide(CALLS[i], rng);
+        removed += savings(CALLS[i], decision);
+
+        tag.textContent = decision.toUpperCase();
+        tag.className = `tag show ${decision}`;
+        el.classList.remove("keep", "drop", "truncate");
+        el.classList.add(decision);
+
+        const after = Math.max(42000, BEFORE - removed);
+        document.getElementById("after").textContent = (after / 1000).toFixed(1) + "k";
+        document.getElementById("afterFill").style.width = Math.round((after / BEFORE) * 92) + "%";
+
+        await sleep(220);
+      }
+
+      btn.disabled = false;
+    }
+
+    document.getElementById("run").addEventListener("click", runCompaction);
+    document.getElementById("reset").addEventListener("click", resetUI);
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Visual Reference Finder · Curiosity</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #111111;
+      --met: #8b5cf6;
+      --nasa: #0ea5e9;
+      --ok: #16a34a;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column;
+    }
+    header {
+      padding: 1.75rem 1.25rem 1rem;
+      max-width: 1100px; width: 100%; margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em;
+      margin: 0 0 0.35rem;
+    }
+    .sub {
+      margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.45;
+      max-width: 52ch;
+    }
+    .search-row {
+      display: flex; gap: 0.6rem; margin-top: 1.25rem; flex-wrap: wrap;
+    }
+    input[type="text"] {
+      flex: 1; min-width: 220px; padding: 0.85rem 1rem;
+      border: 1px solid var(--border); border-radius: 12px;
+      font-size: 0.95rem; background: var(--card); color: var(--text);
+      outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    input[type="text"]:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+    button.primary {
+      padding: 0.85rem 1.25rem; border: none; border-radius: 12px;
+      background: var(--accent); color: #fff; font-weight: 600;
+      font-size: 0.9rem; cursor: pointer; white-space: nowrap;
+    }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.primary:hover:not(:disabled) { background: #333; }
+    .chips {
+      display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.85rem; min-height: 1.5rem;
+    }
+    .chip {
+      font-size: 0.72rem; padding: 0.28rem 0.65rem; border-radius: 999px;
+      background: #f3f4f6; border: 1px solid var(--border); color: #374151;
+      font-weight: 500;
+    }
+    main {
+      flex: 1; max-width: 1100px; width: 100%; margin: 0 auto;
+      padding: 0 1.25rem 2rem;
+      display: grid; grid-template-columns: 220px 1fr; gap: 1.25rem;
+    }
+    @media (max-width: 760px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1rem 1.05rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      height: fit-content;
+    }
+    .panel h2 {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin: 0 0 0.75rem; font-weight: 650;
+    }
+    .checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
+    .checklist li {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      font-size: 0.82rem; color: var(--muted); line-height: 1.35;
+    }
+    .checklist li.done { color: var(--text); }
+    .checklist li.active { color: var(--text); font-weight: 600; }
+    .dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid #d1d5db; margin-top: 1px;
+      display: grid; place-items: center; font-size: 9px;
+    }
+    .done .dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .active .dot {
+      border-color: #111; animation: pulse 1s ease infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.15); }
+      50% { box-shadow: 0 0 0 4px rgba(0,0,0,0.06); }
+    }
+    .meta {
+      margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border);
+      font-size: 0.75rem; color: var(--muted); line-height: 1.4;
+    }
+    .grid-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 0.85rem;
+      min-height: 420px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .empty {
+      height: 380px; display: grid; place-items: center; text-align: center;
+      color: var(--muted); font-size: 0.9rem; padding: 2rem; line-height: 1.5;
+    }
+    .masonry {
+      columns: 4 160px; column-gap: 0.55rem;
+    }
+    .tile {
+      break-inside: avoid; margin-bottom: 0.55rem; position: relative;
+      border-radius: 10px; overflow: hidden; background: #f3f4f6;
+      border: 1px solid var(--border);
+      display: block; text-decoration: none; color: inherit;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .tile:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .tile img {
+      width: 100%; display: block; vertical-align: middle;
+      background: #eee; min-height: 80px; object-fit: cover;
+    }
+    .badge {
+      position: absolute; top: 8px; left: 8px;
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
+      padding: 0.2rem 0.45rem; border-radius: 6px; color: #fff;
+      backdrop-filter: blur(6px);
+    }
+    .badge.met { background: rgba(139,92,246,0.9); }
+    .badge.nasa { background: rgba(14,165,233,0.9); }
+    .cap {
+      font-size: 0.68rem; color: var(--muted); padding: 0.4rem 0.5rem 0.5rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    footer {
+      max-width: 1100px; width: 100%; margin: 0 auto;
+      padding: 0 1.25rem 2rem;
+      font-size: 0.75rem; color: var(--muted); line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Visual reference finder</h1>
+    <p class="sub">One prompt → ~100-scale collage of public-domain / open image refs from Met Museum + NASA. Keyword facets simulate a Jev-style agent loop.</p>
+    <div class="search-row">
+      <input id="prompt" type="text" placeholder="e.g. cosmic brutalist architecture, soft chrome flora…" value="ethereal cosmic architecture with soft chrome flora" />
+      <button class="primary" id="go">Generate collage</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
+  <main>
+    <aside class="panel">
+      <h2>Progress</h2>
+      <ul class="checklist" id="checklist">
+        <li data-step="analyze"><span class="dot"></span><span>Analyzing prompt</span></li>
+        <li data-step="facets"><span class="dot"></span><span>Extracting search facets</span></li>
+        <li data-step="met"><span class="dot"></span><span>Searching Met Museum</span></li>
+        <li data-step="nasa"><span class="dot"></span><span>Searching NASA Images</span></li>
+        <li data-step="collage"><span class="dot"></span><span>Building collage</span></li>
+      </ul>
+      <div class="meta" id="stats">Idle — enter a prompt and generate.</div>
+    </aside>
+    <section class="grid-wrap">
+      <div class="empty" id="empty">Your collage will appear here.<br/>Met + NASA · no API keys.</div>
+      <div class="masonry" id="grid" hidden></div>
+    </section>
+  </main>
+  <footer>
+    Curiosity first-pass · inspired by @albicodes visual reference finder with Jev · no TypeSafe/Jev API — keyword facet simulation
+  </footer>
+  <script>
+    const SYNONYMS = {
+      cosmic: ["cosmos", "nebula", "galaxy", "space"],
+      chrome: ["metallic", "silver", "polished metal"],
+      flora: ["flowers", "botanical", "plants"],
+      brutalist: ["concrete architecture", "brutalism", "monumental building"],
+      ethereal: ["mist", "light", "atmosphere"],
+      soft: ["pastel", "gentle"],
+      architecture: ["building", "structure", "facade"],
+      water: ["ocean", "wave", "sea"],
+      portrait: ["face", "figure"],
+      abstract: ["geometry", "pattern"],
+      vintage: ["antique", "historical"],
+      neon: ["light", "glow", "night city"],
+    };
+
+    const STOP = new Set(["a","an","the","with","and","or","of","in","on","to","for","from","by","into","like","very","some","my","our"]);
+
+    function facetize(prompt) {
+      const raw = prompt.toLowerCase().replace(/[^\w\s-]/g, " ").split(/\s+/).filter(Boolean);
+      const keywords = raw.filter(w => !STOP.has(w) && w.length > 2);
+      const facets = [];
+      const used = new Set();
+
+      for (const w of keywords) {
+        if (facets.length >= 4) break;
+        if (used.has(w)) continue;
+        used.add(w);
+        if (SYNONYMS[w]) {
+          facets.push(w + " " + SYNONYMS[w][0]);
+        } else {
+          facets.push(w);
+        }
+      }
+      // enrich with synonym expansions as extra facets if short
+      for (const w of keywords) {
+        if (facets.length >= 4) break;
+        if (SYNONYMS[w]) {
+          const alt = SYNONYMS[w][1] || SYNONYMS[w][0];
+          if (!facets.includes(alt)) facets.push(alt);
+        }
+      }
+      if (facets.length === 0) facets.push(prompt.slice(0, 40) || "art");
+      if (facets.length === 1) facets.push(facets[0] + " photograph");
+      return facets.slice(0, 4);
+    }
+
+    function setStep(id, state) {
+      const li = document.querySelector(`[data-step="${id}"]`);
+      if (!li) return;
+      li.classList.remove("done", "active");
+      if (state) li.classList.add(state);
+      const dot = li.querySelector(".dot");
+      dot.textContent = state === "done" ? "✓" : "";
+    }
+
+    function resetSteps() {
+      ["analyze","facets","met","nasa","collage"].forEach(s => setStep(s, null));
+    }
+
+    async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function searchMet(q, limit = 12) {
+      const searchUrl = `https://collectionapi.metmuseum.org/public/collection/v1/search?q=${encodeURIComponent(q)}&hasImages=true`;
+      const res = await fetch(searchUrl);
+      if (!res.ok) throw new Error("Met search failed");
+      const data = await res.json();
+      const ids = (data.objectIDs || []).slice(0, Math.min(24, limit * 2));
+      const out = [];
+      // fetch in small parallel batches
+      for (let i = 0; i < ids.length && out.length < limit; i += 6) {
+        const batch = ids.slice(i, i + 6);
+        const objs = await Promise.all(batch.map(async id => {
+          try {
+            const r = await fetch(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${id}`);
+            if (!r.ok) return null;
+            return r.json();
+          } catch { return null; }
+        }));
+        for (const o of objs) {
+          if (!o || !o.primaryImageSmall) continue;
+          out.push({
+            src: o.primaryImageSmall,
+            title: o.title || "Met object",
+            url: o.objectURL || o.primaryImage || o.primaryImageSmall,
+            source: "met",
+          });
+          if (out.length >= limit) break;
+        }
+      }
+      return out;
+    }
+
+    async function searchNasa(q, limit = 12) {
+      const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(q)}&media_type=image`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("NASA search failed");
+      const data = await res.json();
+      const items = (data.collection && data.collection.items) || [];
+      const out = [];
+      for (const item of items) {
+        if (out.length >= limit) break;
+        const meta = (item.data && item.data[0]) || {};
+        const links = item.links || [];
+        const thumb = links.find(l => l.rel === "preview") || links[0];
+        if (!thumb || !thumb.href) continue;
+        const nasaId = meta.nasa_id;
+        out.push({
+          src: thumb.href,
+          title: meta.title || "NASA image",
+          url: nasaId
+            ? `https://images.nasa.gov/details-${nasaId}`
+            : thumb.href,
+          source: "nasa",
+        });
+      }
+      return out;
+    }
+
+    function renderChips(facets) {
+      const el = document.getElementById("chips");
+      el.innerHTML = facets.map(f => `<span class="chip">${escapeHtml(f)}</span>`).join("");
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    function renderGrid(items) {
+      const grid = document.getElementById("grid");
+      const empty = document.getElementById("empty");
+      if (!items.length) {
+        empty.hidden = false;
+        empty.textContent = "No images found — try a broader prompt.";
+        grid.hidden = true;
+        return;
+      }
+      empty.hidden = true;
+      grid.hidden = false;
+      grid.innerHTML = items.map(it => `
+        <a class="tile" href="${escapeHtml(it.url)}" target="_blank" rel="noopener">
+          <span class="badge ${it.source}">${it.source === "met" ? "MET" : "NASA"}</span>
+          <img loading="lazy" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.title)}" onerror="this.parentElement.style.display='none'" />
+          <div class="cap">${escapeHtml(it.title)}</div>
+        </a>
+      `).join("");
+    }
+
+    async function run() {
+      const prompt = document.getElementById("prompt").value.trim();
+      if (!prompt) return;
+      const btn = document.getElementById("go");
+      btn.disabled = true;
+      resetSteps();
+      document.getElementById("stats").textContent = "Working…";
+
+      setStep("analyze", "active");
+      await sleep(350);
+      setStep("analyze", "done");
+
+      setStep("facets", "active");
+      await sleep(280);
+      const facets = facetize(prompt);
+      renderChips(facets);
+      setStep("facets", "done");
+
+      const perFacet = Math.ceil(36 / facets.length);
+      let metItems = [];
+      let nasaItems = [];
+
+      setStep("met", "active");
+      try {
+        const chunks = await Promise.all(facets.map(f => searchMet(f, Math.max(4, Math.floor(perFacet / 2) + 2)).catch(() => [])));
+        metItems = chunks.flat();
+      } catch (e) {
+        console.warn(e);
+      }
+      setStep("met", "done");
+
+      setStep("nasa", "active");
+      try {
+        const chunks = await Promise.all(facets.map(f => searchNasa(f, Math.max(4, Math.floor(perFacet / 2) + 2)).catch(() => [])));
+        nasaItems = chunks.flat();
+      } catch (e) {
+        console.warn(e);
+      }
+      setStep("nasa", "done");
+
+      setStep("collage", "active");
+      await sleep(200);
+      // interleave + dedupe by src
+      const seen = new Set();
+      const mixed = [];
+      const a = metItems, b = nasaItems;
+      const max = Math.max(a.length, b.length);
+      for (let i = 0; i < max; i++) {
+        if (a[i] && !seen.has(a[i].src)) { seen.add(a[i].src); mixed.push(a[i]); }
+        if (b[i] && !seen.has(b[i].src)) { seen.add(b[i].src); mixed.push(b[i]); }
+      }
+      const collage = mixed.slice(0, 48);
+      renderGrid(collage);
+      setStep("collage", "done");
+
+      document.getElementById("stats").textContent =
+        `${collage.length} tiles · ${metItems.filter(x => collage.includes(x) || seen.has(x.src)).length ? "" : ""}` +
+        `Met ${collage.filter(x => x.source === "met").length} · NASA ${collage.filter(x => x.source === "nasa").length} · ${facets.length} facets`;
+      btn.disabled = false;
+    }
+
+    document.getElementById("go").addEventListener("click", run);
+    document.getElementById("prompt").addEventListener("keydown", e => {
+      if (e.key === "Enter") run();
+    });
+  </script>
+</body>
+</html>
