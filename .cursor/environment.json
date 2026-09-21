@@ -1,0 +1,17 @@
+{
+  "name": "Curiosity demos",
+  "install": "echo 'Static site — no dependencies to install.'",
+  "terminals": [
+    {
+      "name": "static-server",
+      "command": "cd \"$(git rev-parse --show-toplevel 2>/dev/null || echo /workspace)\" && python3 -m http.server 8000 --bind 0.0.0.0",
+      "description": "Serves the static demo site (root launcher at /, individual demos under their subdirectories) on port 8000."
+    }
+  ],
+  "ports": [
+    {
+      "name": "static server",
+      "port": 8000
+    }
+  ]
+}
