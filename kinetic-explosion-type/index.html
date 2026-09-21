@@ -188,7 +188,7 @@ const CAP_EM  = 0.718;   // cap height fallback if metrics are unavailable
 // edge, and the band between them becomes the ink line. Counters have to survive
 // the squeeze — too much of any of these and letters collapse into blobs.
 const TUNE = {
-  bubble:   0.95,   // inflation adds ~18%, so this lands ~1.2× the base cap
+  bubble:   1.10,   // inflation adds ~18%, so this lands ~1.35× the base cap
   weight:   800,    // source weight for the inflated letters
   bolden:   0.050,  // pre-blur stroke, as a fraction of glyph size
   blurR:    0.082,  // blur radius, same units
@@ -203,9 +203,9 @@ const TUNE = {
 
 // Sampled straight off the reference frame. Amber repeats because it dominates there.
 const PALETTES = {
-  kielm: { name: 'KIELM', ink: '#141414', cols: ['#E9B657', '#DF513F', '#66BC77', '#5A7EBA', '#E9B657', '#E7B0C5', '#DF513F'] },
+  kielm: { name: 'KIELM', ink: '#141414', cols: ['#E9B657', '#DF513F', '#66BC77', '#E9B657', '#5A7EBA', '#E7B0C5'] },
   mono:  { name: 'MONO',  ink: '#111111', cols: ['#FFFFFF', '#F4F4F4', '#FFFFFF', '#EDEDED', '#FFFFFF'] },
-  volt:  { name: 'VOLT',  ink: '#101010', cols: ['#D8FF3E', '#FF4D2E', '#151515', '#7A5CFF', '#D8FF3E', '#00C2A8', '#FF4D2E', '#151515'] },
+  volt:  { name: 'VOLT',  ink: '#101010', cols: ['#D8FF3E', '#FF3D7F', '#00C2A8', '#D8FF3E', '#7A5CFF', '#FF6A1F'] },
 };
 
 const DEFAULT_PHRASE = 'A NEW / HISTORY / IS HERE / FOR / BEFORE / ANYONE';
@@ -629,7 +629,7 @@ function accentSprite(kind, S, seed) {
     };
     soft(path);
     path(g); g.lineJoin = 'round'; g.lineWidth = lw * 1.7; g.strokeStyle = ink; g.stroke();
-    g.fillStyle = '#E9B657'; g.fill();
+    g.fillStyle = PAL.cols[0]; g.fill();
     g.beginPath(); g.arc(0, 0, R * 0.24, 0, TAU);
     g.fillStyle = '#fff'; g.fill(); g.lineWidth = lw * 0.9; g.strokeStyle = ink; g.stroke();
   } else if (kind === 'bean') {
@@ -733,19 +733,29 @@ function layout() {
   L.wallL = Math.max(fs * 0.06, (W - maxW) / 2 - fs * 0.40);
   L.wallR = Math.min(W - fs * 0.06, (W + maxW) / 2 + fs * 0.40);
 
-  // Colour per cell: strides coprime with the palette length, so no two
-  // neighbours — across or down — land on the same colour.
+  // Colour per cell: a fixed walk through the palette that skips any colour
+  // already used by the letter to the left or the one above, so the heap never
+  // stacks two of the same.
   // Anchors are the opening letters of each line. They never blow out, which is
   // what keeps the phrase readable as FO / BE / AN with the rest in the heap.
   const cols = PAL.cols;
+  let prevRow = [];
   for (let li = 0; li < n; li++) {
     const row = cells.filter(c => c.li === li);
     const anchor = Math.min(row.length, Math.max(2, Math.round(row.length * 0.4)));
+    const mine = [];
     row.forEach((c, i) => {
-      c.color = cols[(li * 5 + i * 3) % cols.length];
+      const banned = [mine[i - 1], prevRow[i], prevRow[i - 1]];
+      let pick = cols[(li + i * 5) % cols.length];
+      for (let k = 1; k < cols.length && banned.indexOf(pick) >= 0; k++) {
+        pick = cols[(li + i * 5 + k) % cols.length];
+      }
+      c.color = pick;
+      mine[i] = pick;
       c.anchored = i < anchor;
       c.ci = i;
     });
+    prevRow = mine;
   }
 
   const S = clamp(Math.round(L.bubbleFs * DPR), 90, 400);
@@ -759,6 +769,7 @@ function layout() {
 
 const bodies = [];
 const fx = [];
+const waves = [];
 let serial = 0;
 let seeding = false;
 let restoring = false;
@@ -858,6 +869,7 @@ function cullBubbles() {
 function sendHome(b) {
   if (b.state !== 'live' || !b.cell) return;
   b.state = 'home';
+  b.asleep = false;
   b.t = 0;
   b.fromX = b.x; b.fromY = b.y; b.fromAng = b.ang;
 }
@@ -867,11 +879,18 @@ function sendHome(b) {
 function integrate(dt) {
   const g = L.fs * 12;
   const R = L.fs * 1.15;
-  const pushing = seeding ? 0 : (pointer.on && !pointer.ghost ? 1 : (pointer.ghost ? 0.55 : 0));
+  const pushing = seeding ? 0 : (pointer.on && !pointer.ghost ? 1 : (pointer.ghost ? 0.26 : 0));
 
   for (const b of bodies) {
     if (b.state !== 'live' || b.host) continue;
     b.support = false;
+
+    // The opening heap is a composition, not a simulation: it holds its shape
+    // until something actually disturbs it, then physics takes over.
+    if (b.asleep) {
+      if (pushing && Math.hypot(b.x - pointer.x, b.y - pointer.y) < R * 1.1) b.asleep = false;
+      else continue;
+    }
 
     if (b.slot && restoring) {
       // left alone, the heap walks itself back into the opening composition
@@ -910,6 +929,7 @@ function integrate(dt) {
       for (let j = i + 1; j < bodies.length; j++) {
         const c = bodies[j];
         if (c.state !== 'live' || c.host) continue;
+        if (a.asleep && c.asleep) continue;
         let dx = c.x - a.x, dy = c.y - a.y;
         let d2 = dx * dx + dy * dy;
         const rr = (a.r + c.r) * 0.92;
@@ -917,13 +937,16 @@ function integrate(dt) {
         const d = Math.sqrt(d2);
         const nx = dx / d, ny = dy / d;
         const pen = rr - d;
-        const ma = a.r * a.r, mc = c.r * c.r, tot = ma + mc;
+        // a sleeping body acts as scenery until something hits it hard enough
+        const ma = a.asleep ? 1e6 : a.r * a.r, mc = c.asleep ? 1e6 : c.r * c.r;
+        const tot = ma + mc;
         const corr = pen * 0.5;
         a.x -= nx * corr * (mc / tot); a.y -= ny * corr * (mc / tot);
         c.x += nx * corr * (ma / tot); c.y += ny * corr * (ma / tot);
         if (ny > 0.45) a.support = true; else if (ny < -0.45) c.support = true;
         const rvx = c.vx - a.vx, rvy = c.vy - a.vy;
         const vn = rvx * nx + rvy * ny;
+        if (vn < -L.fs * 1.2) { a.asleep = false; c.asleep = false; }
         if (vn < 0) {
           const jm = -(1 + 0.22) * vn / (1 / ma + 1 / mc);
           a.vx -= jm * nx / ma; a.vy -= jm * ny / ma;
@@ -950,7 +973,7 @@ function integrate(dt) {
 
     // bounds
     for (const b of bodies) {
-      if (b.state !== 'live' || b.host) continue;
+      if (b.state !== 'live' || b.host || b.asleep) continue;
       if (b.y + b.r > L.floor) {
         const pen = b.y + b.r - L.floor;
         b.y = L.floor - b.r;
@@ -971,7 +994,7 @@ function integrate(dt) {
 
   // settle, and retire strays that nobody is playing with any more
   for (const b of bodies) {
-    if (b.state !== 'live' || b.host) continue;
+    if (b.state !== 'live' || b.host || b.asleep) continue;
     const slow = Math.hypot(b.vx, b.vy) < L.fs * 0.6;
     const seated = b.y + b.r > L.floor - 2 || b.support;
     b.rest = slow ? b.rest + dt : 0;
@@ -979,6 +1002,10 @@ function integrate(dt) {
       const k = Math.pow(0.02, dt);
       b.vx *= k; b.vy *= k; b.spin *= Math.pow(0.004, dt);
       if (!b.slot && Math.abs(b.ang) > 0.001) b.ang *= Math.pow(0.35, dt);
+      if (b.slot && restoring && Math.hypot(b.slot.x - b.x, b.slot.y - b.y) < L.fs * 0.05) {
+        b.x = b.slot.x; b.y = b.slot.y; b.ang = b.slot.ang;
+        b.vx = 0; b.vy = 0; b.spin = 0; b.asleep = true;
+      }
     }
     if (!b.slot && b.kind === 'letter' && b.rest > 3.2) sendHome(b);
   }
@@ -1031,6 +1058,7 @@ function spawnDots(x, y, n) {
 }
 
 function blast(x, y, strength) {
+  waves.push({ x, y, t: 0, life: 0.55, r: L.fs * 3.2 * strength });
   fx.push({ type: 'burst', x, y, t: 0, life: 0.42, r: L.fs * 0.82 * strength, seed: Math.random() * 10 });
   for (let i = 0; i < 12; i++) {
     const a = i / 12 * TAU + rnd(-0.1, 0.1);
@@ -1044,6 +1072,7 @@ function blast(x, y, strength) {
     const dx = b.x - x, dy = b.y - y;
     const d = Math.max(8, Math.hypot(dx, dy));
     if (d > R) continue;
+    b.asleep = false;
     const f = (1 - d / R) * L.fs * 22 * strength;
     b.vx += dx / d * f; b.vy += dy / d * f - L.fs * 1.2;
     b.spin += (Math.random() - 0.5) * 9;
@@ -1061,6 +1090,10 @@ function blast(x, y, strength) {
 }
 
 function stepFx(dt) {
+  for (let i = waves.length - 1; i >= 0; i--) {
+    waves[i].t += dt;
+    if (waves[i].t >= waves[i].life) waves.splice(i, 1);
+  }
   for (let i = fx.length - 1; i >= 0; i--) {
     const e = fx[i];
     e.t += dt;
@@ -1138,6 +1171,18 @@ function drawType(dt) {
         sc = 1 + f * f * 0.035;
       }
     }
+    // a blast sends a ring through the standing type
+    for (const w of waves) {
+      const ox = c.cx - w.x, oy = c.cy - w.y;
+      const d = Math.hypot(ox, oy);
+      if (d < 0.001) continue;
+      const p = w.t / w.life;
+      const front = w.r * easeOut(p);
+      const band = (d - front) / (L.fs * 0.55);
+      const amp = (1 - p) * L.fs * 0.16 * Math.exp(-band * band);
+      dx += ox / d * amp; dy += oy / d * amp;
+      sc += amp / L.fs * 0.20;
+    }
     if (c.pop > 0) { const p = c.pop; sc *= 1 + 0.16 * p * p; }
 
     const sp = blackSprite(c.ch, L.fs);
@@ -1198,7 +1243,8 @@ function drawCursorEnergy() {
 const pointer = { x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, speed: 0, on: false, down: false, ghost: false, t: rnd(0, 100) };
 let lastEject = 0;
 
-function ghostStep(dt) {
+function ghostStep(dt, now) {
+  if (now < 3) return;            // let the opening composition land first
   pointer.t += dt;
   const t = pointer.t;
   const lines = L.lines;
@@ -1248,8 +1294,8 @@ function frame(now) {
   const quiet = !seeding && now - lastInput > 4;
   if (quiet && !restoring) recompose();
   restoring = quiet;
-  if (pointer.ghost) ghostStep(dt);
-  if (pointer.on || pointer.ghost) knockAtPointer(now);
+  if (pointer.ghost) ghostStep(dt, now);
+  if (pointer.on || (pointer.ghost && now > 3)) knockAtPointer(now);
 
   acc = Math.min(acc + dt, 0.1);
   while (acc >= FIXED) { integrate(FIXED); acc -= FIXED; }
@@ -1333,7 +1379,7 @@ const Sound = {
 let heapSlots = [];
 
 function clearWorld() {
-  bodies.length = 0; fx.length = 0;
+  bodies.length = 0; fx.length = 0; waves.length = 0;
   heapSlots = [];
   for (const c of L.cells) { c.out = false; c.pop = 0; }
 }
@@ -1372,29 +1418,17 @@ function seedScene() {
   // Bodies are packed bottom-up in contact terms — each letter one collision
   // radius from the next — so the heap opens at rest and gravity has nothing to
   // collapse. Reverse reading order puts the last line on the floor.
-  const PACK = 0.90;
-  const made = [];
-  for (let ri = rows.length - 1; ri >= 0; ri--) {
+  const PACK = 0.86;
+  const packed = [];
+  for (let ri = rows.length - 1; ri >= 0; ri--) {     // last line ends up on the floor
+    const made = [];
     for (const c of rows[ri]) {
       const b = eject(c, c.cx, L.floor, 0.3);
       if (b) made.push(b);
     }
+    for (let i = 0; i < made.length; i += 4) packed.push(made.slice(i, i + 4));
   }
-  if (!made.length) { seeding = false; return; }
-
-  // start the heap just past the black letters still standing on the last lines
-  const tails = rows.map(r => r[0].x);
-  const heapX = clamp(Math.max(...tails) - L.bubbleFs * 0.62, L.wallL, L.wallR - L.bubbleFs * 2);
-  const heapW = Math.min(L.wallR - heapX, L.bubbleFs * 2.7);
-
-  const packed = [[]];
-  let run = 0;
-  for (const b of made) {
-    const step = b.r * 2 * PACK;
-    if (run + step > heapW && packed[packed.length - 1].length) { packed.push([]); run = 0; }
-    packed[packed.length - 1].push(b);
-    run += step;
-  }
+  if (!packed.length) { seeding = false; return; }
 
   let y = L.floor, prevR = 0;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -1402,14 +1436,17 @@ function seedScene() {
     const maxR = row.reduce((m, b) => Math.max(m, b.r), 0);
     y = i === 0 ? L.floor - maxR : y - (maxR + prevR) * PACK;
     prevR = maxR;
+    // each row starts where its own letters stood, so the heap leans right as it
+    // climbs and the black line openings stay clear
     const span = row.reduce((s, b) => s + b.r * 2 * PACK, 0);
-    let x = heapX + (heapW - span) * (i % 2 ? 0.34 : 0.12);
+    let x = clamp(row[0].cell.x - L.bubbleFs * 0.12, L.wallL, Math.max(L.wallL, L.wallR - span));
     for (const b of row) {
       b.x = clamp(x + b.r * PACK + rnd(-0.02, 0.02) * L.fs, L.wallL + b.r, L.wallR - b.r);
       b.y = y + rnd(-0.04, 0.04) * L.fs;
       b.vx = 0; b.vy = 0; b.spin = 0;
       b.ang = rnd(-0.22, 0.22);
       b.slot = { x: b.x, y: b.y, ang: b.ang };
+      b.asleep = true;
       heapSlots.push({ cell: b.cell, x: b.x, y: b.y, ang: b.ang });
       x += b.r * 2 * PACK;
       x0 = Math.min(x0, b.x - b.r); x1 = Math.max(x1, b.x + b.r);
@@ -1424,15 +1461,12 @@ function seedScene() {
     a.z = z; a.vx = 0; a.vy = 0; a.spin = 0; a.ang = (seed - 0.5) * 0.9;
     attachToNearest(a);
   };
-  tuck('mitt', 0.88, 0.06, 0.35, -1);
-  tuck('mitt2', 0.30, 0.54, 0.72, 1);
-  if (packed.length > 2) tuck('mitt', 0.62, 0.92, 0.18, -1);
-  tuck('daisy', 0.02, 0.60, 0.90, -1);
-  tuck('bean', 0.46, 1.02, 0.50, -1);
+  tuck('mitt', 0.80, 0.16, 0.35, -1);
+  tuck('mitt2', 0.28, 0.52, 0.72, 1);
+  if (packed.length > 2) tuck('mitt', 0.58, 0.88, 0.18, -1);
+  tuck('daisy', 0.05, 0.58, 0.90, -1);
+  tuck('bean', 0.44, 0.99, 0.50, -1);
 
-  for (let i = 0; i < 90; i++) integrate(1 / 120);      // just enough to seat contacts
-  for (const b of bodies) { b.vx *= 0.1; b.vy *= 0.1; b.spin *= 0.1; }
-  for (let i = 0; i < 90; i++) integrate(1 / 120);
   fx.length = 0;
   seeding = false;
 }
@@ -1556,7 +1590,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { poi
 function start() {
   resize();
   pointer.ghost = !REDUCED;
-  pointer.x = W / 2; pointer.y = L.floor - L.fs;
+  pointer.x = W / 2; pointer.y = -H;     // parked off-stage until the demo loop starts
   requestAnimationFrame(frame);
   // idle-warm the remaining glyph sprites so later knock-outs never hitch
   const warm = () => {
