@@ -739,8 +739,8 @@ function layout() {
   L.cx = W / 2;
   L.bubbleFs = fs * TUNE.bubble;
   L.floor = Math.min(H - fs * 0.12, top + blockH + fs * 0.34);
-  L.wallL = Math.max(fs * 0.06, (W - maxW) / 2 - fs * 0.40);
-  L.wallR = Math.min(W - fs * 0.06, (W + maxW) / 2 + fs * 0.40);
+  L.wallL = Math.max(fs * 0.12, (W - maxW) / 2 - fs * 0.40);
+  L.wallR = Math.min(W - fs * 0.12, (W + maxW) / 2 + fs * 0.40);
 
   // Colour per cell: a fixed walk through the palette that skips any colour
   // already used by the letter to the left or the one above, so the heap never
@@ -1007,7 +1007,7 @@ function integrate(dt) {
         b.spin = b.spin * 0.88 - (b.vx / Math.max(1, b.r)) * 0.10;
         if (pen > 0.5) b.vx += (Math.random() - 0.5) * 2;
       }
-      const side = Math.max(b.r, (b.hw || b.r) * 0.86);
+      const side = Math.max(b.r, b.hw || b.r);   // keep the whole sprite on screen
       if (b.x - side < L.wallL) { b.x = L.wallL + side; if (b.vx < 0) b.vx *= -0.34; b.spin *= 0.9; }
       if (b.x + side > L.wallR) { b.x = L.wallR - side; if (b.vx > 0) b.vx *= -0.34; b.spin *= 0.9; }
       if (b.y - b.r < -H * 0.4) { b.y = -H * 0.4 + b.r; b.vy = Math.max(0, b.vy); }
