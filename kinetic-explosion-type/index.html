@@ -1,9 +1,17 @@
 <!doctype html>
 <!--
-  ST V.CONFLICT — kinetic type generator
-  Rebuild 2026-09-21: inflated-glyph pipeline (blur→threshold field) replaces the old
-  particle/drag-blob sketch. Typography measured off the @kiel.d.m reference:
-  cap height 125px against a 136px line advance (0.78em leading), centered, tight tracking.
+  ST V.CONFLICT — a kinetic type generator
+  Study after @kiel.d.m / Space Type Generator (instagram.com/p/DdZx5iIGK58/).
+
+  Build 2026-09-21 (b9df317): full rebuild. The particle / drag-blob sketch is gone.
+  - Typography measured off the reference frame: cap height 125px against a 136px
+    line advance (0.78em leading), centred, tracking -0.018em.
+  - Bubble letters are inflated glyphs: fatten with a round-joined stroke, blur into
+    a field, read it back at three thresholds (white sticker rim / ink contour /
+    flat colour). Counters and open apertures are found with a flood fill plus a
+    morphological closing and carved back out, so E F R S keep their letterform.
+  - Pointer is an explosion centre; the opening heap is composed, sleeps until
+    disturbed, and recomposes itself once the page goes quiet.
 -->
 <html lang="en">
 <head>
@@ -18,7 +26,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #151515;
     --chrome: #242424;
     --chrome-2: #323232;
     --chrome-line: #3e3e3e;
