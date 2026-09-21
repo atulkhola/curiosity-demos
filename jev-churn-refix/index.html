@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Jev Churn · Refix · Curiosity</title>
+  <style>
+    :root {
+      --bg: #0b0d10; --panel: #12161c; --border: #252b34; --text: #e8eaed;
+      --muted: #8b949e; --accent: #3d7eff; --pink: #ff6b9d; --cyan: #58a6ff;
+      --green: #3fb950; --amber: #d29922;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+    header {
+      max-width: 1100px; margin: 0 auto; padding: 1.35rem 1.25rem 0.75rem;
+      display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between;
+    }
+    h1 { font-size: 1.2rem; font-weight: 650; margin: 0 0 0.25rem; }
+    .sub { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.4; max-width: 52ch; }
+    .badge {
+      display: inline-block; margin-top: 0.5rem; font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase; color: var(--amber);
+      border: 1px solid #3a3420; background: #1a1810; border-radius: 999px; padding: 0.22rem 0.6rem;
+    }
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    button {
+      font-family: inherit; cursor: pointer; border-radius: 10px; padding: 0.65rem 1.05rem;
+      font-weight: 650; font-size: 0.82rem; border: 1px solid var(--border);
+      background: #1a222c; color: var(--text);
+    }
+    button.primary { background: var(--pink); color: #0b0d10; border-color: transparent; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button:hover:not(:disabled) { filter: brightness(1.08); }
+    .meters {
+      max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 0.85rem;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.55rem;
+    }
+    @media (max-width: 720px) { .meters { grid-template-columns: 1fr 1fr; } }
+    .meter {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.7rem 0.85rem;
+    }
+    .meter .label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .meter .val { font-family: var(--mono); font-size: 1.2rem; font-weight: 650; margin-top: 0.2rem; }
+    .meter .val.pink { color: var(--pink); }
+    .layout {
+      max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 1.5rem;
+      display: grid; grid-template-columns: 1fr 300px; gap: 0.85rem;
+    }
+    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+    .grid-panel, .side {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 0.9rem;
+    }
+    .grid-panel h2, .side h2 { margin: 0 0 0.65rem; font-size: 0.8rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 0.4rem;
+    }
+    .user {
+      aspect-ratio: 1; border-radius: 10px; border: 1.5px solid transparent;
+      background: #1a222c; display: grid; place-items: center; cursor: pointer;
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      transition: border-color 0.2s, box-shadow 0.25s, transform 0.15s, background 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .user:hover { transform: scale(1.06); border-color: #3d4654; }
+    .user.selected { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(88,166,255,0.25); }
+    .user.at-risk {
+      background: linear-gradient(145deg, #2a1520, #1a222c);
+      border-color: var(--pink); color: #ffb3cc;
+      box-shadow: 0 0 12px rgba(255, 107, 157, 0.35);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .user.scanning { outline: 2px solid var(--cyan); outline-offset: 1px; }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(255,107,157,0.25); }
+      50% { box-shadow: 0 0 16px rgba(255,107,157,0.55); }
+    }
+    .side .empty { color: var(--muted); font-size: 0.82rem; line-height: 1.45; padding: 0.5rem 0; }
+    .who { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.85rem; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+      font-weight: 700; font-size: 0.85rem; background: #1a222c; border: 1px solid var(--border);
+    }
+    .avatar.risk { border-color: var(--pink); color: var(--pink); background: #2a1520; }
+    .who .meta .name { font-weight: 650; font-size: 0.95rem; }
+    .who .meta .id { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+    .score-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+    .pill {
+      font-size: 0.72rem; font-weight: 650; padding: 0.3rem 0.55rem; border-radius: 8px;
+      background: #1a222c; border: 1px solid var(--border);
+    }
+    .pill.risk { color: var(--pink); border-color: #5a3040; background: #2a1520; }
+    .pill.ok { color: var(--green); border-color: #24402a; background: #122018; }
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .evt {
+      position: relative; padding: 0.55rem 0 0.55rem 1rem;
+      border-left: 2px solid var(--border); font-size: 0.78rem; line-height: 1.35;
+    }
+    .evt::before {
+      content: ''; position: absolute; left: -5px; top: 0.75rem;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--border);
+    }
+    .evt.bad { border-left-color: var(--pink); }
+    .evt.bad::before { background: var(--pink); }
+    .evt .t { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-bottom: 0.15rem; }
+    .evt .why { color: var(--pink); font-weight: 600; margin-top: 0.2rem; }
+    .cluster {
+      margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--border);
+      font-size: 0.75rem; color: var(--muted); line-height: 1.4;
+    }
+    .cluster strong { color: var(--text); }
+    footer {
+      max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 2rem;
+      font-size: 0.72rem; color: var(--muted); line-height: 1.45;
+    }
+    footer a { color: var(--cyan); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Jev churn · Refix toy</h1>
+      <p class="sub">Score first-3-session journey prefixes → flag quit risk → cluster root cause. Dramatized seed — inspired by @regalstreak / Refix.</p>
+      <span class="badge">No live Jev · $0.06 simulated</span>
+    </div>
+    <div class="actions">
+      <button class="primary" id="runBtn" type="button">Run Jev on prefixes</button>
+      <button id="resetBtn" type="button">Reset</button>
+    </div>
+  </header>
+  <div class="meters">
+    <div class="meter"><div class="label">Users</div><div class="val" id="mUsers">72</div></div>
+    <div class="meter"><div class="label">Flagged</div><div class="val pink" id="mFlagged">—</div></div>
+    <div class="meter"><div class="label">Avg confidence</div><div class="val" id="mConf">—</div></div>
+    <div class="meter"><div class="label">Est. cost</div><div class="val" id="mCost">$0.00</div></div>
+  </div>
+  <div class="layout">
+    <div class="grid-panel">
+      <h2>Journey cohort (first 3 sessions)</h2>
+      <div class="grid" id="grid" role="list"></div>
+    </div>
+    <aside class="side" id="side">
+      <h2>Where it went wrong</h2>
+      <div class="empty" id="sideEmpty">Select a user after the run — or click any avatar once scored.</div>
+      <div id="sideBody" hidden></div>
+    </aside>
+  </div>
+  <footer>
+    Technique: TypeSafe Jev as System One on journey prefixes → churn risk + confidence + break event; then cluster flagged users (Refix-style). · <a href="../">← Hub</a>
+  </footer>
+  <script>
+    (function () {
+      const N = 72;
+      const PREFIXES = [
+        ['signup', 'skip_onboarding', 'bounce'],
+        ['signup', 'invite_team', 'empty_workspace'],
+        ['signup', 'import_csv', 'error_parse'],
+        ['signup', 'tour', 'paywall_hit'],
+        ['signup', 'complete_onboarding', 'create_project'],
+        ['signup', 'oauth_google', 'dashboard'],
+        ['signup', 'watch_demo', 'close_tab'],
+        ['signup', 'invite_team', 'nobody_joined'],
+      ];
+      const BREAKS = {
+        bounce: 'Dropped after skipping onboarding — never saw aha.',
+        empty_workspace: 'Invited team but landed in empty state with no templates.',
+        error_parse: 'CSV import failed; no recovery path shown.',
+        paywall_hit: 'Hit paywall before first successful outcome.',
+        close_tab: 'Watched demo then closed — activation gap.',
+        nobody_joined: 'Invite sent; collaborator never arrived (social proof fail).',
+      };
+      const SAFE_TAIL = ['create_project', 'dashboard'];
+      const colors = ['#3d7eff','#7c5cff','#58a6ff','#3fb950','#d29922','#ff6b9d','#8b949e'];
+      const users = [];
+      const grid = document.getElementById('grid');
+      let scored = false;
+      let selected = null;
+
+      function seeded(i) {
+        let x = (i * 9301 + 49297) % 233280;
+        return () => { x = (x * 9301 + 49297) % 233280; return x / 233280; };
+      }
+
+      for (let i = 0; i < N; i++) {
+        const rnd = seeded(i + 7);
+        const prefix = PREFIXES[Math.floor(rnd() * PREFIXES.length)];
+        const initials = String.fromCharCode(65 + (i % 26)) + String.fromCharCode(65 + ((i * 3) % 26));
+        const atRiskSeed = !SAFE_TAIL.includes(prefix[2]) && rnd() > 0.28;
+        users.push({
+          id: 'u_' + String(1000 + i),
+          initials,
+          color: colors[i % colors.length],
+          prefix: prefix.slice(),
+          willFlag: atRiskSeed,
+          risk: 0,
+          conf: 0,
+        });
+      }
+
+      function renderGrid() {
+        grid.innerHTML = '';
+        users.forEach((u, idx) => {
+          const el = document.createElement('button');
+          el.type = 'button';
+          el.className = 'user' + (u.flagged ? ' at-risk' : '') + (selected === idx ? ' selected' : '');
+          el.style.color = u.flagged ? '' : u.color;
+          el.textContent = u.initials;
+          el.title = u.id;
+          el.setAttribute('role', 'listitem');
+          el.addEventListener('click', () => selectUser(idx));
+          grid.appendChild(el);
+        });
+      }
+
+      function selectUser(idx) {
+        selected = idx;
+        renderGrid();
+        const u = users[idx];
+        const empty = document.getElementById('sideEmpty');
+        const body = document.getElementById('sideBody');
+        if (!scored) {
+          empty.hidden = false;
+          body.hidden = true;
+          empty.textContent = 'Run scoring first to see risk + break timeline.';
+          return;
+        }
+        empty.hidden = true;
+        body.hidden = false;
+        const breakKey = u.prefix[2];
+        const why = BREAKS[breakKey] || (u.flagged ? 'Prefix looks healthy but model still flagged soft churn signal.' : 'Healthy path — no break event.');
+        body.innerHTML = `
+          <div class="who">
+            <div class="avatar ${u.flagged ? 'risk' : ''}" style="${u.flagged ? '' : 'color:'+u.color}">${u.initials}</div>
+            <div class="meta"><div class="name">${u.initials}</div><div class="id">${u.id}</div></div>
+          </div>
+          <div class="score-row">
+            <span class="pill ${u.flagged ? 'risk' : 'ok'}">${u.flagged ? 'AT RISK' : 'OK'}</span>
+            <span class="pill">risk ${(u.risk * 100).toFixed(0)}%</span>
+            <span class="pill">conf ${(u.conf * 100).toFixed(0)}%</span>
+          </div>
+          <div class="timeline">
+            ${u.prefix.map((step, i) => {
+              const bad = u.flagged && i === 2 && BREAKS[step];
+              return `<div class="evt ${bad ? 'bad' : ''}"><div class="t">session ${i + 1}</div><div>${step.replace(/_/g,' ')}</div>${bad ? '<div class="why">← where it went wrong</div>' : ''}</div>`;
+            }).join('')}
+          </div>
+          <div class="cluster"><strong>Refix cluster hint:</strong> ${u.flagged ? clusterFor(breakKey) : 'Not in a failure cluster.'}</div>
+        `;
+      }
+
+      function clusterFor(key) {
+        const map = {
+          bounce: 'Onboarding skip → bounce (n≈18 in seed)',
+          empty_workspace: 'Invite-before-value empty state',
+          error_parse: 'Import errors without recovery',
+          paywall_hit: 'Paywall before aha',
+          close_tab: 'Demo-only activation gap',
+          nobody_joined: 'Invite sent, zero joins',
+        };
+        return map[key] || 'Mixed soft signals';
+      }
+
+      async function run() {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true;
+        scored = false;
+        users.forEach(u => { u.flagged = false; });
+        renderGrid();
+        document.getElementById('mFlagged').textContent = '…';
+        document.getElementById('mConf').textContent = '…';
+        document.getElementById('mCost').textContent = '$0.00';
+
+        const cells = grid.querySelectorAll('.user');
+        for (let i = 0; i < users.length; i++) {
+          cells[i].classList.add('scanning');
+          await new Promise(r => setTimeout(r, 12 + (i % 5)));
+          const u = users[i];
+          const rnd = seeded(i + 99)();
+          u.risk = u.willFlag ? 0.62 + rnd * 0.35 : 0.08 + rnd * 0.28;
+          u.conf = 0.71 + rnd * 0.24;
+          u.flagged = u.willFlag;
+          cells[i].classList.remove('scanning');
+          if (u.flagged) cells[i].classList.add('at-risk');
+        }
+        scored = true;
+        const flagged = users.filter(u => u.flagged);
+        const avgConf = flagged.reduce((s, u) => s + u.conf, 0) / (flagged.length || 1);
+        document.getElementById('mFlagged').textContent = flagged.length + ' / ' + N;
+        document.getElementById('mConf').textContent = (avgConf * 100).toFixed(0) + '%';
+        document.getElementById('mCost').textContent = '$0.06';
+        btn.disabled = false;
+        // auto-select first flagged
+        const first = users.findIndex(u => u.flagged);
+        if (first >= 0) selectUser(first);
+      }
+
+      function reset() {
+        scored = false; selected = null;
+        users.forEach(u => { u.flagged = false; u.risk = 0; u.conf = 0; });
+        document.getElementById('mFlagged').textContent = '—';
+        document.getElementById('mConf').textContent = '—';
+        document.getElementById('mCost').textContent = '$0.00';
+        document.getElementById('sideEmpty').hidden = false;
+        document.getElementById('sideEmpty').textContent = 'Select a user after the run — or click any avatar once scored.';
+        document.getElementById('sideBody').hidden = true;
+        renderGrid();
+      }
+
+      document.getElementById('runBtn').addEventListener('click', run);
+      document.getElementById('resetBtn').addEventListener('click', reset);
+      document.getElementById('mUsers').textContent = String(N);
+      renderGrid();
+    })();
+  </script>
+</body>
+</html>

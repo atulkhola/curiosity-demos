@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>React Bits Micros · Curiosity</title>
+  <style>
+    :root {
+      --bg: #0b0d10; --panel: #12161c; --border: #252b34; --text: #e8eaed;
+      --muted: #8b949e; --accent: #3d7eff; --pink: #ff6b9d; --cyan: #58a6ff;
+      --green: #3fb950; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+    header {
+      max-width: 920px; margin: 0 auto; padding: 1.5rem 1.25rem 0.5rem;
+    }
+    h1 { font-size: 1.25rem; font-weight: 650; margin: 0 0 0.3rem; letter-spacing: -0.01em; }
+    .sub { margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.45; max-width: 56ch; }
+    .sub a { color: var(--cyan); }
+    .badge {
+      display: inline-block; margin-top: 0.65rem; font-size: 0.68rem; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted);
+      border: 1px solid var(--border); border-radius: 999px; padding: 0.25rem 0.65rem;
+      background: var(--panel);
+    }
+    main {
+      max-width: 920px; margin: 0 auto; padding: 1.25rem;
+      display: grid; gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1.15rem 1.2rem 1.35rem; display: flex; flex-direction: column; gap: 0.85rem;
+      min-height: 280px;
+    }
+    .card h2 { margin: 0; font-size: 0.95rem; font-weight: 650; }
+    .card p { margin: 0; font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+    .stage {
+      flex: 1; display: grid; place-items: center; border-radius: 12px;
+      background: #0e1218; border: 1px dashed #2a3038; padding: 1.25rem;
+      min-height: 140px;
+    }
+
+    /* Hold button */
+    .hold-btn {
+      position: relative; width: min(220px, 100%); height: 52px; border: none;
+      border-radius: 999px; cursor: pointer; overflow: hidden;
+      background: #1a222c; color: var(--text); font-weight: 650; font-size: 0.9rem;
+      font-family: inherit; user-select: none; -webkit-user-select: none;
+      touch-action: none; box-shadow: inset 0 0 0 1px var(--border);
+    }
+    .hold-btn .fill {
+      position: absolute; inset: 0; width: 0%; background: linear-gradient(90deg, #3d7eff, #7c5cff, #ff6b9d);
+      transition: width 0.05s linear; border-radius: inherit;
+    }
+    .hold-btn .label {
+      position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
+      gap: 0.4rem; height: 100%;
+    }
+    .hold-btn.done .fill { width: 100% !important; }
+    .hold-btn.done { color: #0b0d10; }
+    .hold-status { font-size: 0.75rem; color: var(--muted); text-align: center; min-height: 1.2em; }
+
+    /* OTP slots */
+    .otp-row { display: flex; gap: 0.45rem; justify-content: center; flex-wrap: wrap; }
+    .otp-slot {
+      width: 42px; height: 52px; border-radius: 10px; border: 1.5px solid var(--border);
+      background: #151a21; display: grid; place-items: center;
+      font-family: var(--mono); font-size: 1.35rem; font-weight: 650;
+      color: transparent; transform: translateY(8px); opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.22, 1.2, 0.36, 1), opacity 0.25s, border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .otp-slot.landed {
+      transform: translateY(0); opacity: 1; color: var(--text);
+      border-color: var(--accent); background: #1a2433;
+    }
+    .otp-slot.drain {
+      transform: translateY(14px); opacity: 0; color: transparent;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+    }
+    .otp-actions { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+    .chip {
+      font-family: inherit; cursor: pointer; border-radius: 8px; padding: 0.45rem 0.85rem;
+      font-size: 0.78rem; font-weight: 600; border: 1px solid var(--border);
+      background: #1a222c; color: var(--text);
+    }
+    .chip:hover { filter: brightness(1.1); }
+    .chip.primary { background: var(--accent); border-color: transparent; color: #fff; }
+
+    /* Magnetic pill / third micro */
+    .mag-wrap { position: relative; width: 100%; height: 110px; display: grid; place-items: center; }
+    .mag-pill {
+      width: 140px; height: 44px; border-radius: 999px; background: #1a222c;
+      border: 1px solid var(--border); display: grid; place-items: center;
+      font-weight: 650; font-size: 0.85rem; transition: transform 0.15s ease-out, border-color 0.15s, box-shadow 0.15s;
+      will-change: transform; cursor: default;
+    }
+    .mag-pill.hot {
+      border-color: var(--pink); box-shadow: 0 0 24px rgba(255, 107, 157, 0.25);
+      color: #ffd0e0;
+    }
+    .hint { font-size: 0.72rem; color: var(--muted); text-align: center; }
+
+    footer {
+      max-width: 920px; margin: 0 auto; padding: 0.5rem 1.25rem 2rem;
+      font-size: 0.75rem; color: var(--muted); line-height: 1.45;
+    }
+    footer a { color: var(--cyan); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>React Bits micros</h1>
+    <p class="sub">Vanilla first-pass of copy-paste micro interactions inspired by <a href="https://reactbits.dev" rel="noopener">React Bits</a> / @davidhaz — not a fork. Hold, slots, magnetic pill.</p>
+    <span class="badge">No React · single HTML</span>
+  </header>
+  <main>
+    <section class="card">
+      <h2>1 · Hold to confirm</h2>
+      <p>Press and hold — liquid fill confirms. Release early to cancel. Classic destructive-action pattern.</p>
+      <div class="stage">
+        <button class="hold-btn" id="holdBtn" type="button" aria-label="Hold to confirm">
+          <span class="fill" id="holdFill"></span>
+          <span class="label" id="holdLabel">Hold to delete</span>
+        </button>
+      </div>
+      <div class="hold-status" id="holdStatus">Hold ~1.2s to confirm</div>
+    </section>
+
+    <section class="card">
+      <h2>2 · Code slots</h2>
+      <p>OTP / invite code cascade land, then drain. Staggered spring-ish landings.</p>
+      <div class="stage">
+        <div class="otp-row" id="otpRow" aria-hidden="true"></div>
+      </div>
+      <div class="otp-actions">
+        <button class="chip primary" type="button" id="otpFill">Fill code</button>
+        <button class="chip" type="button" id="otpDrain">Drain</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3 · Magnetic pill</h2>
+      <p>Pointer proximity pulls the pill — micro magnetism for hover delight.</p>
+      <div class="stage">
+        <div class="mag-wrap" id="magWrap">
+          <div class="mag-pill" id="magPill">Hover near me</div>
+        </div>
+      </div>
+      <p class="hint">Move pointer around the stage</p>
+    </section>
+  </main>
+  <footer>
+    Inspired by React Bits micro components (Hold Button, Code Slots, etc.). Curiosity demo for bookmark reverse-engineer — reimplement in vanilla for GitHub Pages.
+    · <a href="../">← Hub</a>
+  </footer>
+  <script>
+    (function () {
+      // --- Hold button ---
+      const btn = document.getElementById('holdBtn');
+      const fill = document.getElementById('holdFill');
+      const label = document.getElementById('holdLabel');
+      const status = document.getElementById('holdStatus');
+      const HOLD_MS = 1200;
+      let raf = null, start = 0, holding = false, done = false;
+
+      function setProgress(p) {
+        fill.style.width = Math.min(100, p * 100) + '%';
+      }
+      function tick(now) {
+        if (!holding) return;
+        const p = (now - start) / HOLD_MS;
+        setProgress(p);
+        if (p >= 1) {
+          done = true; holding = false;
+          btn.classList.add('done');
+          label.textContent = 'Confirmed ✓';
+          status.textContent = 'Action confirmed — reset in a moment';
+          setTimeout(resetHold, 1600);
+          return;
+        }
+        raf = requestAnimationFrame(tick);
+      }
+      function resetHold() {
+        done = false; holding = false;
+        btn.classList.remove('done');
+        label.textContent = 'Hold to delete';
+        status.textContent = 'Hold ~1.2s to confirm';
+        setProgress(0);
+      }
+      function startHold(e) {
+        if (done) return;
+        e.preventDefault();
+        holding = true; start = performance.now();
+        status.textContent = 'Keep holding…';
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(tick);
+      }
+      function endHold() {
+        if (done) return;
+        holding = false;
+        cancelAnimationFrame(raf);
+        setProgress(0);
+        status.textContent = 'Released early — cancelled';
+      }
+      btn.addEventListener('pointerdown', startHold);
+      btn.addEventListener('pointerup', endHold);
+      btn.addEventListener('pointerleave', endHold);
+      btn.addEventListener('pointercancel', endHold);
+
+      // --- OTP slots ---
+      const CODE = 'CURIOS';
+      const row = document.getElementById('otpRow');
+      const slots = [];
+      for (let i = 0; i < CODE.length; i++) {
+        const s = document.createElement('div');
+        s.className = 'otp-slot';
+        s.dataset.ch = CODE[i];
+        row.appendChild(s);
+        slots.push(s);
+      }
+      let fillTimer = [];
+      function clearTimers() { fillTimer.forEach(clearTimeout); fillTimer = []; }
+      function fillCode() {
+        clearTimers();
+        slots.forEach((s) => { s.classList.remove('landed', 'drain'); s.textContent = ''; });
+        CODE.split('').forEach((ch, i) => {
+          const t = setTimeout(() => {
+            slots[i].textContent = ch;
+            slots[i].classList.add('landed');
+          }, 80 + i * 90);
+          fillTimer.push(t);
+        });
+      }
+      function drainCode() {
+        clearTimers();
+        slots.forEach((s, i) => {
+          const t = setTimeout(() => {
+            s.classList.remove('landed');
+            s.classList.add('drain');
+            setTimeout(() => { s.textContent = ''; s.classList.remove('drain'); }, 280);
+          }, i * 55);
+          fillTimer.push(t);
+        });
+      }
+      document.getElementById('otpFill').addEventListener('click', fillCode);
+      document.getElementById('otpDrain').addEventListener('click', drainCode);
+      setTimeout(fillCode, 400);
+
+      // --- Magnetic pill ---
+      const wrap = document.getElementById('magWrap');
+      const pill = document.getElementById('magPill');
+      wrap.addEventListener('pointermove', (e) => {
+        const r = wrap.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        const pull = Math.max(0, 1 - dist / 140);
+        const mx = dx * 0.22 * pull;
+        const my = dy * 0.22 * pull;
+        pill.style.transform = `translate(${mx.toFixed(1)}px, ${my.toFixed(1)}px)`;
+        pill.classList.toggle('hot', pull > 0.35);
+      });
+      wrap.addEventListener('pointerleave', () => {
+        pill.style.transform = 'translate(0,0)';
+        pill.classList.remove('hot');
+      });
+    })();
+  </script>
+</body>
+</html>
