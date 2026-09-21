@@ -213,6 +213,7 @@ const PACK = 0.86;              // contact spacing: letters overlap a little
 const MAX_OUT = 14;            // bubbles alive at once; older ones deflate home
 const EJECT_GAP = 0.20;        // s between hover knock-outs
 const GHOST_GAP = 2.6;         // the unattended demo loop knocks far more slowly
+const QUIET = 2.5;             // s of stillness before the poster recomposes itself
 const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1023,7 +1024,7 @@ function integrate(dt) {
     }
     // strays deflate home once they settle, and unconditionally once the page has
     // been quiet for a while — the phrase always comes back
-    if (!b.slot && b.kind === 'letter' && (b.rest > 3.2 || (restoring && nowS - b.born > 7))) sendHome(b);
+    if (!b.slot && b.kind === 'letter' && (b.rest > 2.4 || (restoring && nowS - b.born > 6))) sendHome(b);
   }
 
   // returning letters
@@ -1308,7 +1309,7 @@ function frame(now) {
   frames++; fpsT += dt;
   if (fpsT > 1) { fpsVal = frames / fpsT; frames = 0; fpsT = 0; }
 
-  const quiet = !seeding && now - lastInput > 4;
+  const quiet = !seeding && now - lastInput > QUIET;
   if (quiet && !restoring) recompose();
   restoring = quiet;
   if (pointer.ghost) ghostStep(dt, now);
@@ -1518,7 +1519,9 @@ cvs.addEventListener('pointermove', (e) => {
   pointer.vx = pointer.x - pointer.px; pointer.vy = pointer.y - pointer.py;
   pointer.speed = Math.hypot(pointer.vx, pointer.vy) * 60;
   pointer.on = true;
-  touch();
+  // a jittery or drifting cursor shouldn't count as someone playing, or the
+  // poster would never get the stillness it needs to recompose
+  if (Math.hypot(pointer.vx, pointer.vy) > 2) touch();
   silenceHint();
 });
 
