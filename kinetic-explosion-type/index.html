@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Kinetic Explosion Type</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      background: #000; 
+      touch-action: none;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    canvas { display: block; }
+    .credit {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 11px;
+      pointer-events: none;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .credit a {
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      pointer-events: auto;
+    }
+    .hint {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 13px;
+      pointer-events: none;
+      animation: fadeOut 4s forwards;
+      text-align: center;
+      padding: 0 20px;
+    }
+    @keyframes fadeOut {
+      0%, 50% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hint">Move cursor or tap to create explosion</div>
+  <div class="credit">
+    Inspired by <a href="https://www.instagram.com/kiel.d.m/" target="_blank" rel="noopener">@kiel.d.m</a> / Space Type Generator R&D
+  </div>
+  
+  <script>
+    let phrase = "A NEW HISTORY TAKES SHAPE EXPLORE UNKNOWNS";
+    let particles = [];
+    let explosionForce = 0;
+    let explosionX = 0;
+    let explosionY = 0;
+    let targetExplosionForce = 0;
+    let mouseActive = false;
+    
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      textFont('Arial Black, Impact, sans-serif');
+      textAlign(CENTER, CENTER);
+      
+      // Create particle grid from text
+      regenerateParticles();
+    }
+    
+    function regenerateParticles() {
+      particles = [];
+      
+      // Determine text size based on screen width
+      let txtSize = width < 600 ? width * 0.08 : width * 0.06;
+      textSize(txtSize);
+      
+      let words = phrase.split(' ');
+      let yStart = height * 0.3;
+      let lineHeight = txtSize * 1.3;
+      
+      // Create text particles for each word
+      let currentY = yStart;
+      let maxWidth = width * 0.85;
+      let currentLine = [];
+      
+      for (let word of words) {
+        currentLine.push(word);
+        let lineText = currentLine.join(' ');
+        let lineWidth = textWidth(lineText);
+        
+        if (lineWidth > maxWidth) {
+          // Render previous line
+          currentLine.pop();
+          if (currentLine.length > 0) {
+            createLineParticles(currentLine.join(' '), width / 2, currentY, txtSize);
+            currentY += lineHeight;
+          }
+          currentLine = [word];
+        }
+      }
+      
+      // Render last line
+      if (currentLine.length > 0) {
+        createLineParticles(currentLine.join(' '), width / 2, currentY, txtSize);
+      }
+    }
+    
+    function createLineParticles(txt, x, y, size) {
+      let spacing = size * 0.15;
+      
+      for (let i = 0; i < txt.length; i++) {
+        let char = txt[i];
+        if (char === ' ') continue;
+        
+        let charWidth = textWidth(char);
+        let totalWidth = textWidth(txt);
+        let charX = x - totalWidth / 2 + textWidth(txt.substring(0, i + 1)) - charWidth / 2;
+        
+        // Create multiple particles per character for thickness
+        let density = 3;
+        for (let dx = -density; dx <= density; dx++) {
+          for (let dy = -density; dy <= density; dy++) {
+            particles.push({
+              char: char,
+              homeX: charX + dx * spacing,
+              homeY: y + dy * spacing,
+              x: charX + dx * spacing,
+              y: y + dy * spacing,
+              vx: 0,
+              vy: 0,
+              size: size
+            });
+          }
+        }
+      }
+    }
+    
+    function draw() {
+      background(0);
+      
+      // Update explosion force (smooth decay)
+      explosionForce = lerp(explosionForce, targetExplosionForce, 0.15);
+      
+      // Update and draw particles
+      for (let p of particles) {
+        // Calculate distance from explosion center
+        let dx = p.x - explosionX;
+        let dy = p.y - explosionY;
+        let dist = sqrt(dx * dx + dy * dy);
+        
+        // Apply explosion force
+        if (mouseActive && dist < 300) {
+          let force = explosionForce * (1 - dist / 300);
+          let angle = atan2(dy, dx);
+          p.vx += cos(angle) * force * 0.5;
+          p.vy += sin(angle) * force * 0.5;
+        }
+        
+        // Apply velocity
+        p.x += p.vx;
+        p.y += p.vy;
+        
+        // Spring back to home position
+        let returnForce = 0.08;
+        p.vx += (p.homeX - p.x) * returnForce;
+        p.vy += (p.homeY - p.y) * returnForce;
+        
+        // Damping
+        p.vx *= 0.88;
+        p.vy *= 0.88;
+        
+        // Draw character
+        fill(255);
+        noStroke();
+        textSize(p.size);
+        text(p.char, p.x, p.y);
+      }
+      
+      // Draw radial action lines near explosion
+      if (explosionForce > 0.1 && mouseActive) {
+        drawExplosionLines();
+      }
+      
+      // Decay target force when not active
+      if (!mouseActive) {
+        targetExplosionForce *= 0.9;
+      }
+    }
+    
+    function drawExplosionLines() {
+      push();
+      stroke(255, 255, 255, explosionForce * 100);
+      strokeWeight(3);
+      
+      let numLines = 16;
+      let lineLength = 60 + explosionForce * 40;
+      
+      for (let i = 0; i < numLines; i++) {
+        let angle = (TWO_PI / numLines) * i;
+        let x1 = explosionX + cos(angle) * 30;
+        let y1 = explosionY + sin(angle) * 30;
+        let x2 = explosionX + cos(angle) * lineLength;
+        let y2 = explosionY + sin(angle) * lineLength;
+        line(x1, y1, x2, y2);
+      }
+      
+      // Inner blast circle
+      noFill();
+      strokeWeight(4);
+      stroke(255, 255, 255, explosionForce * 150);
+      circle(explosionX, explosionY, 20 + explosionForce * 30);
+      
+      pop();
+    }
+    
+    function updateExplosion(x, y) {
+      explosionX = x;
+      explosionY = y;
+      targetExplosionForce = 2.5;
+      mouseActive = true;
+    }
+    
+    function mouseMoved() {
+      updateExplosion(mouseX, mouseY);
+      return false;
+    }
+    
+    function mouseDragged() {
+      updateExplosion(mouseX, mouseY);
+      return false;
+    }
+    
+    function touchMoved() {
+      if (touches.length > 0) {
+        updateExplosion(touches[0].x, touches[0].y);
+      }
+      return false;
+    }
+    
+    function touchStarted() {
+      if (touches.length > 0) {
+        updateExplosion(touches[0].x, touches[0].y);
+      }
+      return false;
+    }
+    
+    function mouseReleased() {
+      mouseActive = false;
+      return false;
+    }
+    
+    function touchEnded() {
+      mouseActive = false;
+      return false;
+    }
+    
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+      regenerateParticles();
+    }
+  </script>
+</body>
+</html>
