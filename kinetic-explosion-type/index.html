@@ -3,272 +3,294 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>Kinetic Explosion Type</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <title>ST V.CONFLICT — kinetic type toy</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      margin: 0; 
-      overflow: hidden; 
-      background: #fff; 
-      touch-action: none;
-      font-family: ui-sans-serif, system-ui, sans-serif;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #fff; overflow: hidden; font-family: "Arial Black", "Helvetica Neue", Helvetica, Arial, sans-serif; touch-action: none; }
+    canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+    .badge {
+      position: fixed; top: 14px; left: 14px; z-index: 5;
+      background: rgba(20,20,20,0.88); color: #fff; border-radius: 8px;
+      padding: 8px 10px; font: 600 11px/1.25 ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: 0.02em; pointer-events: none;
     }
-    canvas { display: block; }
+    .badge small { display: block; opacity: 0.7; font-weight: 500; margin-top: 2px; }
     .credit {
-      position: fixed;
-      bottom: 12px;
-      left: 12px;
-      color: rgba(0, 0, 0, 0.4);
-      font-size: 11px;
-      pointer-events: none;
-      font-weight: 500;
-      letter-spacing: 0.02em;
+      position: fixed; bottom: 12px; left: 12px; z-index: 5;
+      font: 500 11px/1.3 ui-sans-serif, system-ui, sans-serif; color: rgba(0,0,0,0.45);
     }
-    .credit a {
-      color: rgba(0, 0, 0, 0.6);
-      text-decoration: none;
-      pointer-events: auto;
-    }
+    .credit a { color: rgba(0,0,0,0.65); }
     .hint {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: rgba(0, 0, 0, 0.4);
-      font-size: 13px;
-      pointer-events: none;
-      animation: fadeOut 4s forwards;
-      text-align: center;
-      padding: 0 20px;
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      font: 500 13px/1.3 ui-sans-serif, system-ui, sans-serif; color: rgba(0,0,0,0.4);
+      pointer-events: none; animation: fade 5s forwards; text-align: center; padding: 0 16px;
     }
-    @keyframes fadeOut {
-      0%, 50% { opacity: 1; }
-      100% { opacity: 0; }
-    }
+    @keyframes fade { 0%,55% { opacity: 1; } 100% { opacity: 0; } }
   </style>
 </head>
 <body>
-  <div class="hint">Move cursor or tap to warp typography</div>
-  <div class="credit">
-    Inspired by <a href="https://www.instagram.com/kiel.d.m/" target="_blank" rel="noopener">@kiel.d.m</a> / Space Type Generator R&D
-  </div>
-  
+  <div class="badge">ST V.CONFLICT<small>a generator toy · after kielm</small></div>
+  <div class="hint">Drag the colorful letters · black type stays put</div>
+  <div class="credit">Inspired by <a href="https://www.instagram.com/p/DdZx5iIGK58/" target="_blank" rel="noopener">@kiel.d.m</a> / Space Type Generator · not an official clone</div>
+  <canvas id="c"></canvas>
   <script>
-    let phrase = "A NEW HISTORY TAKES SHAPE EXPLORE UNKNOWNS";
-    let words = [];
-    let explosionX = -1000;
-    let explosionY = -1000;
-    let explosionForce = 0;
-    let targetForce = 0;
-    let mouseActive = false;
-    
-    function setup() {
-      createCanvas(windowWidth, windowHeight);
-      textFont('Arial Black, Impact, sans-serif');
-      
-      layoutWords();
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, dpr = 1;
+
+  const LINES = ['A NEW', 'HISTORY', 'IS HERE', 'FOR', 'BEFORE', 'ANYONE'];
+  // Bubbly overlays sit on the lower lines — like the reference
+  const BUBBLE_CHARS = [
+    { ch: 'F', color: '#ff4fa3' },
+    { ch: 'O', color: '#ff8a00' },
+    { ch: 'R', color: '#3ddc84' },
+    { ch: 'B', color: '#4c6fff' },
+    { ch: 'E', color: '#ffe14a' },
+    { ch: 'F', color: '#ff3b5c' },
+    { ch: 'O', color: '#7c5cff' },
+    { ch: 'R', color: '#00c2ff' },
+    { ch: 'E', color: '#ff6bcb' },
+    { ch: 'A', color: '#ffd166' },
+    { ch: 'N', color: '#06d6a0' },
+    { ch: 'Y', color: '#ef476f' },
+    { ch: 'O', color: '#118ab2' },
+    { ch: 'N', color: '#ff9f1c' },
+    { ch: 'E', color: '#9b5de5' },
+  ];
+
+  const bubbles = [];
+  let drag = null;
+  let pointer = { x: 0, y: 0, down: false };
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    layoutBubbles();
+  }
+
+  function stackLayout() {
+    const padX = Math.min(48, W * 0.06);
+    const top = H * 0.1;
+    const usable = H * 0.78;
+    const lineH = usable / LINES.length;
+    // Fit font so longest line fits
+    let fontSize = lineH * 0.78;
+    ctx.font = `900 ${fontSize}px "Arial Black", Impact, sans-serif`;
+    let maxW = 0;
+    for (const line of LINES) maxW = Math.max(maxW, ctx.measureText(line).width);
+    if (maxW > W - padX * 2) fontSize *= (W - padX * 2) / maxW;
+    const lines = LINES.map((text, i) => ({
+      text,
+      y: top + lineH * (i + 0.55),
+      fontSize,
+    }));
+    return lines;
+  }
+
+  function layoutBubbles() {
+    const lines = stackLayout();
+    // Place bubbles clustered over last 3 lines
+    const focusLines = lines.slice(3);
+    bubbles.length = 0;
+    const cx = W * 0.52;
+    const cy = focusLines[1] ? focusLines[1].y : H * 0.72;
+    BUBBLE_CHARS.forEach((b, i) => {
+      const ang = (i / BUBBLE_CHARS.length) * Math.PI * 2;
+      const rad = 40 + (i % 5) * 18;
+      const size = Math.max(42, Math.min(W, H) * 0.09) * (0.85 + (i % 3) * 0.12);
+      bubbles.push({
+        ch: b.ch,
+        color: b.color,
+        x: cx + Math.cos(ang) * rad * 1.6 + (i % 4 - 1.5) * 28,
+        y: cy + Math.sin(ang) * rad * 0.9 + (i % 3 - 1) * 22,
+        vx: 0,
+        vy: 0,
+        size,
+        rot: ((i * 17) % 25) - 12,
+        homeX: 0,
+        homeY: 0,
+      });
+    });
+    // set homes after positions
+    for (const b of bubbles) {
+      b.homeX = b.x;
+      b.homeY = b.y;
     }
-    
-    function layoutWords() {
-      words = [];
-      let txtSize = width < 600 ? width * 0.085 : width * 0.065;
-      
-      let wordList = phrase.split(' ');
-      let yPos = height * 0.25;
-      let lineHeight = txtSize * 1.4;
-      let maxWidth = width * 0.9;
-      
-      let currentLine = [];
-      
-      for (let word of wordList) {
-        currentLine.push(word);
-        let lineText = currentLine.join(' ');
-        textSize(txtSize);
-        let lineWidth = textWidth(lineText);
-        
-        if (lineWidth > maxWidth && currentLine.length > 1) {
-          currentLine.pop();
-          addLineWords(currentLine, width / 2, yPos, txtSize);
-          yPos += lineHeight;
-          currentLine = [word];
+  }
+
+  function drawBlackType(lines) {
+    ctx.save();
+    ctx.fillStyle = '#000';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const line of lines) {
+      ctx.font = `900 ${line.fontSize}px "Arial Black", Impact, Helvetica, sans-serif`;
+      ctx.fillText(line.text, W / 2, line.y);
+    }
+    ctx.restore();
+  }
+
+  function drawBubble(b) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate((b.rot * Math.PI) / 180);
+    // soft shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    roundBlob(0, 6, b.size * 0.58);
+    ctx.fill();
+    // body
+    ctx.fillStyle = b.color;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = Math.max(4, b.size * 0.07);
+    roundBlob(0, 0, b.size * 0.55);
+    ctx.fill();
+    ctx.stroke();
+    // highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(-b.size * 0.15, -b.size * 0.18, b.size * 0.18, b.size * 0.12, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // letter
+    ctx.fillStyle = '#000';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `900 ${b.size * 0.72}px "Arial Black", Impact, sans-serif`;
+    ctx.fillText(b.ch, 0, 2);
+    // tiny glove accent on some
+    if (b.size > 55 && (b.ch === 'E' || b.ch === 'R' || b.ch === 'Y')) {
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(b.size * 0.42, b.size * 0.28, b.size * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function roundBlob(x, y, r) {
+    ctx.beginPath();
+    // slightly irregular soft circle
+    const n = 8;
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const rr = r * (0.92 + 0.08 * Math.sin(i * 2.1));
+      const px = x + Math.cos(a) * rr;
+      const py = y + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  function hitTest(x, y) {
+    // topmost first
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      const dx = x - b.x, dy = y - b.y;
+      if (dx * dx + dy * dy < (b.size * 0.55) ** 2) return i;
+    }
+    return -1;
+  }
+
+  function step() {
+    // soft springs + pointer push
+    for (let i = 0; i < bubbles.length; i++) {
+      const b = bubbles[i];
+      if (drag === i) continue;
+      // home spring
+      b.vx += (b.homeX - b.x) * 0.02;
+      b.vy += (b.homeY - b.y) * 0.02;
+      // mutual soft repulsion
+      for (let j = i + 1; j < bubbles.length; j++) {
+        const o = bubbles[j];
+        const dx = o.x - b.x, dy = o.y - b.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const min = (b.size + o.size) * 0.42;
+        if (d < min) {
+          const f = (min - d) * 0.08;
+          const nx = dx / d, ny = dy / d;
+          b.vx -= nx * f; b.vy -= ny * f;
+          o.vx += nx * f; o.vy += ny * f;
         }
       }
-      
-      if (currentLine.length > 0) {
-        addLineWords(currentLine, width / 2, yPos, txtSize);
-      }
-    }
-    
-    function addLineWords(lineWords, centerX, y, size) {
-      let lineText = lineWords.join(' ');
-      textSize(size);
-      let totalWidth = textWidth(lineText);
-      let x = centerX - totalWidth / 2;
-      
-      for (let word of lineWords) {
-        let chars = word.split('');
-        for (let char of chars) {
-          let charWidth = textWidth(char);
-          words.push({
-            char: char,
-            x: x + charWidth / 2,
-            y: y,
-            size: size
-          });
-          x += charWidth;
+      // idle pointer poke
+      if (!pointer.down) {
+        const dx = b.x - pointer.x, dy = b.y - pointer.y;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d < 120) {
+          const f = (120 - d) * 0.015;
+          b.vx += (dx / d) * f;
+          b.vy += (dy / d) * f;
         }
-        x += textWidth(' ');
       }
+      b.vx *= 0.86; b.vy *= 0.86;
+      b.x += b.vx; b.y += b.vy;
+      // keep on screen
+      b.x = Math.max(b.size * 0.4, Math.min(W - b.size * 0.4, b.x));
+      b.y = Math.max(b.size * 0.4, Math.min(H - b.size * 0.4, b.y));
     }
-    
-    function draw() {
-      // CRITICAL: Clear canvas every frame
-      background(255);
-      
-      // Smooth force decay
-      explosionForce = lerp(explosionForce, targetForce, 0.12);
-      if (!mouseActive) {
-        targetForce *= 0.85;
-      }
-      
-      // Draw blast effect first (behind text)
-      if (explosionForce > 0.1 && mouseActive) {
-        drawBlastEffect();
-      }
-      
-      // Draw each character with displacement
-      fill(0);
-      noStroke();
-      
-      for (let w of words) {
-        push();
-        
-        // Calculate displacement from explosion center
-        let dx = w.x - explosionX;
-        let dy = w.y - explosionY;
-        let dist = sqrt(dx * dx + dy * dy);
-        let maxDist = 250;
-        
-        let dispX = 0;
-        let dispY = 0;
-        let scaleAmount = 1;
-        let rotAmount = 0;
-        
-        if (dist < maxDist && explosionForce > 0) {
-          let force = explosionForce * (1 - dist / maxDist);
-          let angle = atan2(dy, dx);
-          
-          // Displacement outward
-          dispX = cos(angle) * force * 60;
-          dispY = sin(angle) * force * 60;
-          
-          // Scale and rotation based on force
-          scaleAmount = 1 + force * 0.4;
-          rotAmount = force * 0.15 * (random() > 0.5 ? 1 : -1);
-        }
-        
-        // Apply transformations
-        translate(w.x + dispX, w.y + dispY);
-        rotate(rotAmount);
-        scale(scaleAmount);
-        
-        textSize(w.size);
-        textAlign(CENTER, CENTER);
-        text(w.char, 0, 0);
-        
-        pop();
-      }
+  }
+
+  function frame() {
+    const lines = stackLayout();
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, W, H);
+    drawBlackType(lines);
+    step();
+    for (const b of bubbles) drawBubble(b);
+    requestAnimationFrame(frame);
+  }
+
+  function ptr(e) {
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX, y: t.clientY };
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    const p = ptr(e);
+    pointer = { ...p, down: true };
+    const i = hitTest(p.x, p.y);
+    if (i >= 0) {
+      drag = i;
+      bubbles[i].vx = 0; bubbles[i].vy = 0;
+      // bring to front
+      const [b] = bubbles.splice(i, 1);
+      bubbles.push(b);
+      drag = bubbles.length - 1;
+      canvas.setPointerCapture(e.pointerId);
     }
-    
-    function drawBlastEffect() {
-      push();
-      
-      // Radial action lines
-      stroke(0);
-      strokeWeight(3);
-      let numLines = 12;
-      let innerRad = 25;
-      let outerRad = 50 + explosionForce * 40;
-      
-      for (let i = 0; i < numLines; i++) {
-        let angle = (TWO_PI / numLines) * i + frameCount * 0.05;
-        let x1 = explosionX + cos(angle) * innerRad;
-        let y1 = explosionY + sin(angle) * innerRad;
-        let x2 = explosionX + cos(angle) * outerRad;
-        let y2 = explosionY + sin(angle) * outerRad;
-        line(x1, y1, x2, y2);
-      }
-      
-      // Jagged blast cloud outline
-      noFill();
-      stroke(0);
-      strokeWeight(4);
-      beginShape();
-      let cloudRad = 20 + explosionForce * 20;
-      let points = 16;
-      for (let i = 0; i <= points; i++) {
-        let angle = (TWO_PI / points) * i;
-        let r = cloudRad + random(-8, 8);
-        let x = explosionX + cos(angle) * r;
-        let y = explosionY + sin(angle) * r;
-        vertex(x, y);
-      }
-      endShape(CLOSE);
-      
-      // Inner burst circle
-      noFill();
-      strokeWeight(2);
-      circle(explosionX, explosionY, 15 + explosionForce * 15);
-      
-      pop();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    const p = ptr(e);
+    pointer.x = p.x; pointer.y = p.y;
+    if (drag != null) {
+      const b = bubbles[drag];
+      b.x = p.x; b.y = p.y;
+      b.vx = 0; b.vy = 0;
     }
-    
-    function updateExplosion(x, y) {
-      explosionX = x;
-      explosionY = y;
-      targetForce = 1.5;
-      mouseActive = true;
-    }
-    
-    function mouseMoved() {
-      updateExplosion(mouseX, mouseY);
-      return false;
-    }
-    
-    function mouseDragged() {
-      updateExplosion(mouseX, mouseY);
-      return false;
-    }
-    
-    function touchMoved() {
-      if (touches.length > 0) {
-        updateExplosion(touches[0].x, touches[0].y);
-      }
-      return false;
-    }
-    
-    function touchStarted() {
-      if (touches.length > 0) {
-        updateExplosion(touches[0].x, touches[0].y);
-      }
-      return false;
-    }
-    
-    function mouseReleased() {
-      mouseActive = false;
-      return false;
-    }
-    
-    function touchEnded() {
-      mouseActive = false;
-      return false;
-    }
-    
-    function windowResized() {
-      resizeCanvas(windowWidth, windowHeight);
-      layoutWords();
-    }
+  });
+  function endDrag() {
+    pointer.down = false;
+    drag = null;
+  }
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
   </script>
 </body>
 </html>
