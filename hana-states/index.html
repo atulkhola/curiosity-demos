@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Hana States · Curiosity</title>
+  <style>
+    :root {
+      --bg: #0b0d10; --panel: #12161c; --border: #252b34; --text: #e8eaed;
+      --muted: #8b949e; --accent: #3d7eff; --cyan: #58a6ff; --pink: #ff6b9d;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+    header { max-width: 1000px; margin: 0 auto; padding: 1.35rem 1.25rem 0.5rem; }
+    h1 { font-size: 1.2rem; font-weight: 650; margin: 0 0 0.25rem; }
+    .sub { margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.4; max-width: 56ch; }
+    .layout {
+      max-width: 1000px; margin: 0 auto; padding: 1rem 1.25rem 2rem;
+      display: grid; grid-template-columns: 1fr 280px; gap: 0.85rem;
+    }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+    .canvas-wrap, .panel {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    }
+    .canvas-wrap { padding: 1rem; min-height: 360px; position: relative; }
+    .canvas-label {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin-bottom: 0.75rem;
+    }
+    .canvas {
+      position: relative; height: 300px; border-radius: 12px; background: #0e1218;
+      border: 1px dashed #2a3038; overflow: hidden;
+    }
+    .obj {
+      position: absolute; left: 50%; top: 50%; width: 120px; height: 72px;
+      margin-left: -60px; margin-top: -36px; border-radius: 16px;
+      background: #1a222c; border: 2px solid #3d4654; color: var(--text);
+      display: grid; place-items: center; font-weight: 650; font-size: 0.85rem;
+      cursor: pointer; user-select: none;
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                  background 0.45s, border-color 0.45s, box-shadow 0.45s, border-radius 0.45s;
+      will-change: transform;
+    }
+    .obj.state-hover {
+      transform: translateY(-10px) scale(1.06);
+      background: #243044; border-color: var(--accent);
+      box-shadow: 0 12px 28px rgba(61,126,255,0.3);
+    }
+    .obj.state-active {
+      transform: scale(0.94); background: var(--accent); border-color: transparent;
+      color: #fff; border-radius: 20px;
+    }
+    .obj.state-open {
+      transform: translate(40px, -30px) rotate(6deg) scale(1.12);
+      background: linear-gradient(135deg, #7c5cff, var(--pink));
+      border-color: transparent; color: #fff;
+      box-shadow: 0 16px 40px rgba(255,107,157,0.35);
+    }
+    .panel { padding: 1rem; }
+    .panel h2 {
+      margin: 0 0 0.75rem; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    }
+    .row { margin-bottom: 0.85rem; }
+    .row label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.35rem; }
+    select, button {
+      width: 100%; font-family: inherit; font-size: 0.85rem; font-weight: 600;
+      border-radius: 10px; padding: 0.55rem 0.7rem; border: 1px solid var(--border);
+      background: #1a222c; color: var(--text); cursor: pointer;
+    }
+    button.primary { background: var(--accent); border-color: transparent; color: #fff; }
+    .flow {
+      font-family: var(--mono); font-size: 0.7rem; line-height: 1.55;
+      background: #0e1218; border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.7rem 0.8rem; color: var(--cyan);
+    }
+    .hint { font-size: 0.75rem; color: var(--muted); line-height: 1.4; margin-top: 0.75rem; }
+    footer {
+      max-width: 1000px; margin: 0 auto; padding: 0 1.25rem 2rem;
+      font-size: 0.72rem; color: var(--muted);
+    }
+    footer a { color: var(--cyan); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Hana states playground</h1>
+    <p class="sub">Tiny states → events → actions toy inspired by Spline Hana. Click / hover the object; wire transitions in the panel.</p>
+  </header>
+  <div class="layout">
+    <div class="canvas-wrap">
+      <div class="canvas-label">Canvas · play mode</div>
+      <div class="canvas" id="canvas">
+        <div class="obj" id="obj" data-state="base">Button</div>
+      </div>
+    </div>
+    <aside class="panel">
+      <h2>States</h2>
+      <div class="row">
+        <label>Current state</label>
+        <select id="stateSelect">
+          <option value="base">Base</option>
+          <option value="hover">Hover</option>
+          <option value="active">Active (press)</option>
+          <option value="open">Open</option>
+        </select>
+      </div>
+      <h2>Events → Actions</h2>
+      <div class="flow" id="flow">
+        Mouse Hover → Transition(Hover)<br/>
+        Mouse Leave → Transition(Base)<br/>
+        Mouse Press → Transition(Active)<br/>
+        Click → Transition(Open) toggle
+      </div>
+      <button class="primary" type="button" id="playStart" style="margin-top:0.75rem">Fire Start event</button>
+      <p class="hint">Hana model: define named states on an object, attach events (hover/press/start), run Transition actions. This is a dramatized mini of that loop — not Spline.</p>
+    </aside>
+  </div>
+  <footer>Inspired by Spline Hana 2D interactivity. · <a href="../">← Hub</a></footer>
+  <script>
+    (function () {
+      const obj = document.getElementById('obj');
+      const sel = document.getElementById('stateSelect');
+      let lockedOpen = false;
+
+      function setState(name) {
+        obj.classList.remove('state-hover', 'state-active', 'state-open');
+        obj.dataset.state = name;
+        sel.value = name;
+        if (name === 'hover') obj.classList.add('state-hover');
+        if (name === 'active') obj.classList.add('state-active');
+        if (name === 'open') obj.classList.add('state-open');
+        obj.textContent = name === 'base' ? 'Button' : name.charAt(0).toUpperCase() + name.slice(1);
+      }
+
+      sel.addEventListener('change', () => {
+        lockedOpen = sel.value === 'open';
+        setState(sel.value);
+      });
+
+      obj.addEventListener('pointerenter', () => {
+        if (!lockedOpen) setState('hover');
+      });
+      obj.addEventListener('pointerleave', () => {
+        if (!lockedOpen) setState('base');
+      });
+      obj.addEventListener('pointerdown', () => {
+        if (!lockedOpen) setState('active');
+      });
+      obj.addEventListener('pointerup', () => {
+        if (!lockedOpen) setState('hover');
+      });
+      obj.addEventListener('click', () => {
+        lockedOpen = !lockedOpen;
+        setState(lockedOpen ? 'open' : 'base');
+      });
+
+      document.getElementById('playStart').addEventListener('click', () => {
+        lockedOpen = false;
+        setState('base');
+        setTimeout(() => setState('hover'), 200);
+        setTimeout(() => setState('open'), 700);
+        setTimeout(() => { lockedOpen = true; }, 700);
+      });
+    })();
+  </script>
+</body>
+</html>

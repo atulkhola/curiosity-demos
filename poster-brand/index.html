@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Poster Brand · Curiosity</title>
+  <style>
+    :root {
+      --bg: #0b0d10; --panel: #12161c; --border: #252b34; --text: #e8eaed;
+      --muted: #8b949e; --accent: #3d7eff; --cyan: #58a6ff;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+    header { max-width: 980px; margin: 0 auto; padding: 1.35rem 1.25rem 0.5rem; }
+    h1 { font-size: 1.2rem; font-weight: 650; margin: 0 0 0.25rem; }
+    .sub { margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.4; max-width: 52ch; }
+    .layout {
+      max-width: 980px; margin: 0 auto; padding: 1rem 1.25rem 2rem;
+      display: grid; grid-template-columns: 280px 1fr; gap: 1rem; align-items: start;
+    }
+    @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+    .controls {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem;
+    }
+    label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.72rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    input[type="text"], select {
+      font-family: inherit; font-size: 0.9rem; font-weight: 500; text-transform: none; letter-spacing: 0;
+      color: var(--text); background: #0e1218; border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.6rem 0.75rem;
+    }
+    input[type="color"] {
+      width: 100%; height: 42px; border: 1px solid var(--border); border-radius: 10px;
+      background: #0e1218; cursor: pointer; padding: 0.25rem;
+    }
+    .swatches { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .swatch {
+      width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent;
+      cursor: pointer; padding: 0;
+    }
+    .swatch.active { border-color: #fff; }
+    button {
+      font-family: inherit; cursor: pointer; border-radius: 10px; padding: 0.7rem 1rem;
+      font-weight: 650; font-size: 0.85rem; border: 1px solid var(--border);
+      background: var(--accent); color: #fff; border-color: transparent;
+    }
+    button.ghost { background: #1a222c; color: var(--text); border-color: var(--border); }
+    .btn-row { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+    .stage {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1rem; display: grid; place-items: center; min-height: 420px;
+    }
+    .poster {
+      width: min(340px, 100%); aspect-ratio: 3 / 4; border-radius: 4px;
+      position: relative; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 1.4rem 1.25rem 1.2rem; transition: background 0.25s;
+    }
+    .poster.layout-a { background: linear-gradient(160deg, var(--brand) 0%, #0b0d10 55%); }
+    .poster.layout-b { background: #0e1218; border: 3px solid var(--brand); }
+    .poster.layout-c {
+      background:
+        radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--brand) 55%, transparent), transparent 45%),
+        linear-gradient(180deg, #12161c, #0b0d10);
+    }
+    .poster .mark {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+      opacity: 0.85;
+    }
+    .poster .hero {
+      font-size: clamp(1.6rem, 6vw, 2.35rem); font-weight: 750; letter-spacing: -0.03em;
+      line-height: 1.05; margin: 0.5rem 0 0;
+    }
+    .poster .tag {
+      font-size: 0.9rem; opacity: 0.8; line-height: 1.35; max-width: 22ch; margin-top: 0.65rem;
+    }
+    .poster .bar {
+      height: 4px; width: 48px; background: var(--brand); border-radius: 2px; margin: 0.75rem 0;
+    }
+    .poster.layout-b .bar { width: 100%; }
+    .poster .foot {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7;
+    }
+    .poster .orb {
+      position: absolute; width: 140px; height: 140px; border-radius: 50%;
+      background: color-mix(in srgb, var(--brand) 40%, transparent);
+      filter: blur(2px); right: -30px; top: -20px; pointer-events: none;
+    }
+    .poster.layout-b .orb { display: none; }
+    footer {
+      max-width: 980px; margin: 0 auto; padding: 0 1.25rem 2rem;
+      font-size: 0.72rem; color: var(--muted); line-height: 1.45;
+    }
+    footer a { color: var(--cyan); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Poster · Brand toy</h1>
+    <p class="sub">Pick brand color, name, tagline — generate a clean CSS poster layout. Inspired by @rahulbhadoriiya brand/poster experiments.</p>
+  </header>
+  <div class="layout">
+    <div class="controls">
+      <label>Brand name
+        <input type="text" id="name" value="Pixel & Pump" maxlength="32" />
+      </label>
+      <label>Tagline
+        <input type="text" id="tag" value="Design systems that ship." maxlength="64" />
+      </label>
+      <label>Brand color
+        <input type="color" id="color" value="#3d7eff" />
+      </label>
+      <div class="swatches" id="swatches"></div>
+      <label>Layout
+        <select id="layout">
+          <option value="layout-a">Gradient wash</option>
+          <option value="layout-b">Frame border</option>
+          <option value="layout-c">Orb glow</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button type="button" id="regen">Generate</button>
+        <button type="button" class="ghost" id="shuffle">Shuffle</button>
+      </div>
+    </div>
+    <div class="stage">
+      <article class="poster layout-a" id="poster" style="--brand:#3d7eff">
+        <div class="orb" aria-hidden="true"></div>
+        <div>
+          <div class="mark" id="pMark">PIXEL & PUMP</div>
+          <div class="bar"></div>
+          <h2 class="hero" id="pHero">Design systems that ship.</h2>
+          <p class="tag" id="pTag">Brand poster · curiosity demo</p>
+        </div>
+        <div class="foot">
+          <span id="pYear">2026</span>
+          <span>01 / 01</span>
+        </div>
+      </article>
+    </div>
+  </div>
+  <footer>
+    Tiny branded poster designer — CSS only, no Figma export. · <a href="../">← Hub</a>
+  </footer>
+  <script>
+    (function () {
+      const PRESETS = ['#3d7eff','#ff6b9d','#7c5cff','#3fb950','#f0a500','#e85d4c','#58a6ff'];
+      const TAGS = [
+        'Design systems that ship.',
+        'Less decks. More product.',
+        'Brand that compounds.',
+        'Taste as infrastructure.',
+        'Ship the feeling.',
+      ];
+      const NAMES = ['Pixel & Pump','Dacoit','Curiosity','Northline','Atelier'];
+      const sw = document.getElementById('swatches');
+      PRESETS.forEach((c) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'swatch'; b.style.background = c;
+        b.title = c;
+        b.addEventListener('click', () => {
+          document.getElementById('color').value = c;
+          apply();
+          [...sw.children].forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+        });
+        sw.appendChild(b);
+      });
+      sw.children[0].classList.add('active');
+
+      function apply() {
+        const name = document.getElementById('name').value.trim() || 'Brand';
+        const tag = document.getElementById('tag').value.trim() || 'Tagline';
+        const color = document.getElementById('color').value;
+        const layout = document.getElementById('layout').value;
+        const poster = document.getElementById('poster');
+        poster.className = 'poster ' + layout;
+        poster.style.setProperty('--brand', color);
+        document.getElementById('pMark').textContent = name.toUpperCase();
+        document.getElementById('pHero').textContent = tag;
+        document.getElementById('pTag').textContent = name + ' · poster';
+        document.getElementById('pYear').textContent = '2026';
+      }
+      function shuffle() {
+        document.getElementById('name').value = NAMES[Math.floor(Math.random() * NAMES.length)];
+        document.getElementById('tag').value = TAGS[Math.floor(Math.random() * TAGS.length)];
+        const c = PRESETS[Math.floor(Math.random() * PRESETS.length)];
+        document.getElementById('color').value = c;
+        document.getElementById('layout').value = ['layout-a','layout-b','layout-c'][Math.floor(Math.random()*3)];
+        [...sw.children].forEach((x,i) => x.classList.toggle('active', PRESETS[i] === c));
+        apply();
+      }
+      ['name','tag','color','layout'].forEach(id => {
+        document.getElementById(id).addEventListener('input', apply);
+        document.getElementById(id).addEventListener('change', apply);
+      });
+      document.getElementById('regen').addEventListener('click', apply);
+      document.getElementById('shuffle').addEventListener('click', shuffle);
+      apply();
+    })();
+  </script>
+</body>
+</html>
