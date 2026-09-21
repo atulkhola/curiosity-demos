@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Jev Instant Classifier · Curiosity</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --dot: #d0d4dc;
+      --ink: #1a1d24;
+      --muted: #6b7280;
+      --composer: #1c1f26;
+      --composer-border: #2e3340;
+      --chip: #ffffff;
+      --chip-border: #e2e5eb;
+      --accent: #5b8cff;
+      --scout: #94a3b8;
+      --lite: #3b82f6;
+      --tasty: #f59e0b;
+      --strategy: #a855f7;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      background-color: var(--bg);
+      background-image: radial-gradient(circle, var(--dot) 1.1px, transparent 1.1px);
+      background-size: 18px 18px;
+      color: var(--ink);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Caption */
+    .caption {
+      position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+      z-index: 40; display: flex; align-items: center; gap: 0.45rem;
+      padding: 0.4rem 0.75rem; border-radius: 999px;
+      background: rgba(255,255,255,0.92); border: 1px solid var(--chip-border);
+      box-shadow: 0 4px 16px rgba(15,23,42,0.06);
+      font-size: 0.72rem; font-weight: 600; color: var(--muted);
+      backdrop-filter: blur(8px); max-width: calc(100vw - 2rem);
+      white-space: nowrap;
+    }
+    .caption strong { color: var(--ink); font-weight: 700; }
+    .caption a { color: var(--accent); text-decoration: none; margin-left: 0.35rem; }
+    .caption a:hover { text-decoration: underline; }
+
+    /* Left toolbar */
+    .toolbar {
+      position: fixed; left: 14px; top: 50%; transform: translateY(-50%);
+      z-index: 30; display: flex; flex-direction: column; gap: 0.35rem;
+      padding: 0.45rem; border-radius: 14px;
+      background: rgba(255,255,255,0.88); border: 1px solid var(--chip-border);
+      box-shadow: 0 8px 24px rgba(15,23,42,0.07);
+      backdrop-filter: blur(8px);
+    }
+    .toolbar button {
+      width: 36px; height: 36px; border: none; border-radius: 10px;
+      background: transparent; color: var(--muted); cursor: default;
+      display: grid; place-items: center; font-size: 0.95rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .toolbar button:hover { background: #eef1f6; color: var(--ink); }
+    .toolbar button.active { background: #e8eeff; color: var(--accent); }
+    @media (max-width: 560px) {
+      .toolbar { left: 8px; padding: 0.3rem; }
+      .toolbar button { width: 32px; height: 32px; font-size: 0.85rem; }
+    }
+
+    /* Canvas / generated UI */
+    .stage {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 4.5rem 4rem 7.5rem; pointer-events: none;
+    }
+    @media (max-width: 560px) {
+      .stage { padding: 4rem 0.75rem 8.5rem 3.25rem; }
+    }
+
+    .pricing {
+      width: min(720px, 100%);
+      opacity: 0; transform: translateY(18px) scale(0.98);
+      transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: auto;
+    }
+    .pricing.show { opacity: 1; transform: translateY(0) scale(1); }
+
+    .pricing-head {
+      text-align: center; margin-bottom: 1.25rem;
+    }
+    .pricing-head .eyebrow {
+      display: inline-block; font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+      background: #e8eeff; border-radius: 999px; padding: 0.25rem 0.6rem; margin-bottom: 0.55rem;
+    }
+    .pricing-head h2 {
+      margin: 0 0 0.35rem; font-size: clamp(1.35rem, 4vw, 1.75rem);
+      font-weight: 700; letter-spacing: -0.02em;
+    }
+    .pricing-head p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+    .cards {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;
+    }
+    @media (max-width: 640px) {
+      .cards { grid-template-columns: 1fr; max-width: 320px; margin: 0 auto; }
+    }
+    .card {
+      background: #fff; border: 1px solid var(--chip-border); border-radius: 16px;
+      padding: 1.1rem 1rem 1rem; box-shadow: 0 10px 30px rgba(15,23,42,0.06);
+      display: flex; flex-direction: column; gap: 0.55rem;
+      animation: cardIn 0.5s ease both;
+    }
+    .card:nth-child(1) { animation-delay: 0.08s; }
+    .card:nth-child(2) { animation-delay: 0.16s; }
+    .card:nth-child(3) { animation-delay: 0.24s; }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .card.featured {
+      border-color: #b8ccff; box-shadow: 0 12px 36px rgba(91,140,255,0.18);
+      background: linear-gradient(180deg, #f7f9ff 0%, #fff 55%);
+      position: relative;
+    }
+    .card .tag {
+      position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      background: var(--accent); color: #fff; padding: 0.2rem 0.5rem; border-radius: 999px;
+    }
+    .card .plan { font-size: 0.78rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .card .price { font-size: 1.65rem; font-weight: 750; letter-spacing: -0.03em; }
+    .card .price span { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+    .card ul { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+    .card li {
+      font-size: 0.78rem; color: #374151; display: flex; gap: 0.4rem; align-items: flex-start;
+    }
+    .card li::before { content: "✓"; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+    .card .cta {
+      margin-top: auto; border: none; border-radius: 10px; padding: 0.6rem 0.75rem;
+      font-family: inherit; font-weight: 650; font-size: 0.8rem; cursor: default;
+      background: #eef1f6; color: var(--ink);
+    }
+    .card.featured .cta { background: var(--accent); color: #fff; }
+
+    .compare {
+      margin-top: 0.9rem; background: rgba(255,255,255,0.85);
+      border: 1px solid var(--chip-border); border-radius: 12px; padding: 0.65rem 0.85rem;
+      font-size: 0.72rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.65rem 1.1rem;
+      justify-content: center; backdrop-filter: blur(6px);
+      opacity: 0; transition: opacity 0.4s ease 0.35s;
+    }
+    .pricing.show .compare { opacity: 1; }
+    .compare b { color: var(--ink); font-weight: 650; }
+
+    /* Powerups */
+    .powerups {
+      position: fixed; left: 50%; bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%); z-index: 35;
+      display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center;
+      max-width: min(520px, calc(100vw - 1.5rem));
+      padding: 0 0.5rem;
+    }
+    .powerup {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.38rem 0.7rem; border-radius: 999px;
+      background: var(--chip); border: 1px solid var(--chip-border);
+      box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+      font-size: 0.72rem; font-weight: 600; color: var(--ink);
+      cursor: pointer; transition: border-color 0.15s, transform 0.15s, background 0.15s;
+      font-family: inherit;
+    }
+    .powerup:hover { border-color: #c5cad4; transform: translateY(-1px); }
+    .powerup.on { border-color: #b8ccff; background: #f0f4ff; color: #2b5fd9; }
+    .powerup .ico { font-size: 0.85rem; opacity: 0.85; }
+
+    /* Composer */
+    .composer-wrap {
+      position: fixed; left: 50%; bottom: calc(1.1rem + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%); z-index: 40;
+      width: min(560px, calc(100vw - 1.5rem));
+    }
+    .composer {
+      display: flex; align-items: center; gap: 0.45rem;
+      padding: 0.45rem 0.5rem 0.45rem 0.55rem;
+      background: var(--composer); border: 1px solid var(--composer-border);
+      border-radius: 999px;
+      box-shadow: 0 12px 40px rgba(15,23,42,0.28), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    }
+    .icon-btn {
+      width: 34px; height: 34px; border: none; border-radius: 50%;
+      background: transparent; color: #9aa3b2; cursor: pointer;
+      display: grid; place-items: center; flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+    .icon-btn:hover { background: #2a303c; color: #e8eaed; }
+    .classifier {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.28rem 0.55rem 0.28rem 0.4rem; border-radius: 999px;
+      background: #2a303c; border: 1px solid #3a4252;
+      font-size: 0.7rem; font-weight: 650; color: #e8eaed;
+      flex-shrink: 0; min-width: 5.6rem;
+      transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    .classifier .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--scout);
+      box-shadow: 0 0 0 3px rgba(148,163,184,0.25);
+      transition: background 0.25s, box-shadow 0.25s;
+      animation: pulseDot 1.1s ease-in-out infinite;
+    }
+    .classifier.cycling .dot { animation-duration: 0.55s; }
+    .classifier[data-model="Scout"] .dot { background: var(--scout); box-shadow: 0 0 0 3px rgba(148,163,184,0.3); }
+    .classifier[data-model="Lite"] .dot { background: var(--lite); box-shadow: 0 0 0 3px rgba(59,130,246,0.35); }
+    .classifier[data-model="Tasty"] .dot { background: var(--tasty); box-shadow: 0 0 0 3px rgba(245,158,11,0.35); }
+    .classifier[data-model="Strategy"] .dot { background: var(--strategy); box-shadow: 0 0 0 3px rgba(168,85,247,0.35); }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.25); opacity: 0.75; }
+    }
+    .classifier .label { transition: opacity 0.15s; }
+
+    .prompt {
+      flex: 1; min-width: 0; border: none; outline: none;
+      background: transparent; color: #e8eaed;
+      font-family: inherit; font-size: 0.88rem; padding: 0.35rem 0.15rem;
+    }
+    .prompt::placeholder { color: #6b7280; }
+    .send {
+      width: 36px; height: 36px; border: none; border-radius: 50%;
+      background: var(--accent); color: #fff; cursor: pointer;
+      display: grid; place-items: center; flex-shrink: 0;
+      transition: transform 0.15s, filter 0.15s, opacity 0.15s;
+    }
+    .send:hover { filter: brightness(1.08); transform: scale(1.04); }
+    .send:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .send svg { width: 16px; height: 16px; }
+
+    .hint {
+      text-align: center; margin-top: 0.4rem;
+      font-size: 0.65rem; color: var(--muted); opacity: 0.85;
+    }
+
+    .empty-hint {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      padding: 5rem 2rem 8rem; pointer-events: none;
+      color: var(--muted); font-size: 0.88rem; text-align: center;
+      transition: opacity 0.3s;
+    }
+    .empty-hint.hide { opacity: 0; }
+    .empty-hint span {
+      background: rgba(255,255,255,0.75); border: 1px dashed #c5cad4;
+      border-radius: 12px; padding: 0.75rem 1.1rem; max-width: 28ch; line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="caption">
+    <strong>instant classifier</strong> — no model picker
+    <a href="../">← Hub</a>
+  </div>
+
+  <nav class="toolbar" aria-label="Tools">
+    <button type="button" class="active" title="Select" aria-label="Select">⬚</button>
+    <button type="button" title="Frame" aria-label="Frame">▭</button>
+    <button type="button" title="Text" aria-label="Text">T</button>
+    <button type="button" title="Image" aria-label="Image">▣</button>
+    <button type="button" title="Components" aria-label="Components">⬡</button>
+    <button type="button" title="Layers" aria-label="Layers">☰</button>
+  </nav>
+
+  <div class="stage">
+    <div class="empty-hint" id="emptyHint">
+      <span>Type a prompt — the classifier picks Scout → Lite → Tasty → Strategy for you.</span>
+    </div>
+    <div class="pricing" id="pricing" hidden aria-live="polite">
+      <div class="pricing-head">
+        <div class="eyebrow">Generated · Frontend Design</div>
+        <h2>Simple pricing that scales</h2>
+        <p>Subscription plans for teams that ship fast.</p>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="plan">Starter</div>
+          <div class="price">$12 <span>/ mo</span></div>
+          <ul>
+            <li>1 project</li>
+            <li>Basic analytics</li>
+            <li>Community support</li>
+          </ul>
+          <button class="cta" type="button">Get started</button>
+        </div>
+        <div class="card featured">
+          <span class="tag">Popular</span>
+          <div class="plan">Pro</div>
+          <div class="price">$29 <span>/ mo</span></div>
+          <ul>
+            <li>Unlimited projects</li>
+            <li>A/B pricing tests</li>
+            <li>Priority support</li>
+            <li>Custom domains</li>
+          </ul>
+          <button class="cta" type="button">Start free trial</button>
+        </div>
+        <div class="card">
+          <div class="plan">Business</div>
+          <div class="price">$79 <span>/ mo</span></div>
+          <ul>
+            <li>SSO &amp; roles</li>
+            <li>Usage-based add-ons</li>
+            <li>Dedicated CSM</li>
+          </ul>
+          <button class="cta" type="button">Talk to sales</button>
+        </div>
+      </div>
+      <div class="compare">
+        <span><b>Compare:</b> seats</span>
+        <span>API access</span>
+        <span>SLA</span>
+        <span>Design tokens</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="powerups" role="group" aria-label="Powerups">
+    <button type="button" class="powerup on" data-power="variations"><span class="ico">✦</span> Design Variations</button>
+    <button type="button" class="powerup on" data-power="frontend"><span class="ico">◈</span> Frontend Design</button>
+    <button type="button" class="powerup" data-power="all"><span class="ico">◎</span> All powerups</button>
+  </div>
+
+  <div class="composer-wrap">
+    <form class="composer" id="composer" autocomplete="off">
+      <button type="button" class="icon-btn" title="History" aria-label="History">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/><path d="M12 7v5l3 2"/></svg>
+      </button>
+      <div class="classifier" id="classifier" data-model="Scout" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="label" id="classifierLabel">Scout</span>
+      </div>
+      <input class="prompt" id="prompt" type="text"
+        value="Design a clean pricing page with 3 subscription tiers"
+        placeholder="Describe what to build…"
+        aria-label="Prompt" />
+      <button class="send" id="send" type="submit" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+    </form>
+    <div class="hint">Classifier routes automatically — you never pick a model</div>
+  </div>
+
+  <script>
+    (function () {
+      const MODELS = [
+        { name: 'Scout', color: 'var(--scout)' },
+        { name: 'Lite', color: 'var(--lite)' },
+        { name: 'Tasty', color: 'var(--tasty)' },
+        { name: 'Strategy', color: 'var(--strategy)' }
+      ];
+      const classifier = document.getElementById('classifier');
+      const labelEl = document.getElementById('classifierLabel');
+      const promptEl = document.getElementById('prompt');
+      const pricing = document.getElementById('pricing');
+      const emptyHint = document.getElementById('emptyHint');
+      const form = document.getElementById('composer');
+      const sendBtn = document.getElementById('send');
+
+      let cycleTimer = null;
+      let modelIndex = 0;
+      let busy = false;
+      let revealed = false;
+
+      function setModel(i) {
+        modelIndex = i % MODELS.length;
+        const m = MODELS[modelIndex];
+        classifier.dataset.model = m.name;
+        labelEl.textContent = m.name;
+      }
+
+      function stopCycle() {
+        if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
+        classifier.classList.remove('cycling');
+      }
+
+      function startCycle(speedMs) {
+        stopCycle();
+        classifier.classList.add('cycling');
+        setModel(0);
+        let step = 0;
+        cycleTimer = setInterval(function () {
+          step += 1;
+          setModel(step);
+        }, speedMs);
+      }
+
+      function revealPricing() {
+        emptyHint.classList.add('hide');
+        pricing.hidden = false;
+        requestAnimationFrame(function () {
+          pricing.classList.add('show');
+        });
+        revealed = true;
+      }
+
+      function resetPricing() {
+        pricing.classList.remove('show');
+        pricing.hidden = true;
+        emptyHint.classList.remove('hide');
+        revealed = false;
+      }
+
+      async function runClassify(fromSend) {
+        if (busy) return;
+        busy = true;
+        sendBtn.disabled = true;
+        if (fromSend && revealed) resetPricing();
+
+        // Fast cycle while "thinking"
+        startCycle(220);
+        await wait(900 + Math.random() * 400);
+
+        // Settle on Strategy (product/UX-ish final route for a pricing page)
+        stopCycle();
+        setModel(3); // Strategy
+        await wait(280);
+        revealPricing();
+
+        busy = false;
+        sendBtn.disabled = false;
+      }
+
+      function wait(ms) {
+        return new Promise(function (r) { setTimeout(r, ms); });
+      }
+
+      // Powerup toggles (decorative)
+      document.querySelectorAll('.powerup').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (btn.dataset.power === 'all') {
+            const turnOn = !btn.classList.contains('on');
+            document.querySelectorAll('.powerup').forEach(function (b) {
+              b.classList.toggle('on', turnOn);
+            });
+          } else {
+            btn.classList.toggle('on');
+          }
+        });
+      });
+
+      // Type → soft classify preview (debounced cycle)
+      let typeDebounce = null;
+      promptEl.addEventListener('input', function () {
+        if (busy) return;
+        clearTimeout(typeDebounce);
+        stopCycle();
+        startCycle(180);
+        typeDebounce = setTimeout(function () {
+          stopCycle();
+          // Soft settle based on length / keywords (toy heuristic)
+          const t = promptEl.value.toLowerCase();
+          let idx = 1; // Lite default
+          if (t.length < 12) idx = 0;
+          else if (/pricing|subscription|page|ui|design|landing/.test(t)) idx = 3;
+          else if (/copy|tone|brand/.test(t)) idx = 2;
+          setModel(idx);
+        }, 700);
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        runClassify(true);
+      });
+
+      // Auto-demo on load
+      setTimeout(function () { runClassify(false); }, 600);
+    })();
+  </script>
+</body>
+</html>
