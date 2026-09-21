@@ -247,9 +247,9 @@ const measureCvs = document.createElement('canvas');
 const measure = measureCvs.getContext('2d');
 
 /* ══════════════════════════════════════════════════════════════════════════
-   3 · GLYPH FIELD  —  blur an alpha bitmap of the glyph, then read it at two
-   thresholds. Low threshold = inflated silhouette, high = colour fill; the band
-   between them becomes the ink contour, and counters shrink to comic slits.
+   3 · GLYPH FIELD  —  blur an alpha bitmap of the glyph, then read the field back
+   at three thresholds: white sticker rim, ink contour, flat colour. Counters
+   shrink to comic slits, and the gradient of the field does the volume shading.
    ══════════════════════════════════════════════════════════════════════════ */
 
 function boxBlur1D(src, dst, w, h, r, vertical) {
