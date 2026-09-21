@@ -30,7 +30,7 @@
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     touch-action: none; overscroll-behavior: none;
   }
-  canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+  canvas { display: block; width: 100%; height: 100%; cursor: none; }
 
   .hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
   .hud > * { pointer-events: auto; }
@@ -1235,22 +1235,53 @@ function drawBodies() {
   ctx.globalAlpha = 1;
 }
 
-function drawCursorEnergy() {
-  if (!pointer.on || pointer.ghost) return;
-  const sp = Math.min(1, pointer.speed / (L.fs * 14));
-  if (sp < 0.05) return;
-  ctx.globalAlpha = sp * 0.5;
+/* The explosion centre draws itself: a reticle instead of the system cursor, plus
+   drag streaks behind a fast pointer. Also the only pointer feedback on touch. */
+function drawCursorEnergy(dt) {
+  pointer.aim += ((pointer.on && !pointer.ghost ? 1 : 0) - pointer.aim) * Math.min(1, dt * 9);
+  pointer.press = Math.max(0, pointer.press - dt * 3.4);
+  if (pointer.aim < 0.02) return;
+
+  ctx.save();
   ctx.strokeStyle = PAL.ink;
-  ctx.lineWidth = Math.max(1, L.fs * 0.018);
-  const a = Math.atan2(-pointer.vy, -pointer.vx);
-  for (let i = 0; i < 3; i++) {
-    const off = (i - 1) * 0.42;
-    const r0 = L.fs * (0.22 + i * 0.05), r1 = r0 + L.fs * 0.26 * sp;
+  ctx.lineCap = 'round';
+
+  const sp = Math.min(1, pointer.speed / (L.fs * 14));
+  if (sp > 0.05) {
+    ctx.globalAlpha = pointer.aim * sp * 0.45;
+    ctx.lineWidth = Math.max(1, L.fs * 0.016);
+    const a = Math.atan2(-pointer.vy, -pointer.vx);
+    for (let i = 0; i < 3; i++) {
+      const off = (i - 1) * 0.42;
+      const r0 = L.fs * (0.20 + i * 0.05), r1 = r0 + L.fs * 0.24 * sp;
+      ctx.beginPath();
+      ctx.moveTo(pointer.x + Math.cos(a + off) * r0, pointer.y + Math.sin(a + off) * r0);
+      ctx.lineTo(pointer.x + Math.cos(a + off) * r1, pointer.y + Math.sin(a + off) * r1);
+      ctx.stroke();
+    }
+  }
+
+  const r = L.fs * (0.085 + 0.055 * pointer.press);
+  const lw = Math.max(1.2, L.fs * 0.011);
+  ctx.globalAlpha = pointer.aim * (0.62 + 0.38 * pointer.press);
+  ctx.lineWidth = lw;
+  ctx.beginPath();
+  ctx.arc(pointer.x, pointer.y, r, 0, TAU);
+  ctx.stroke();
+  for (let i = 0; i < 4; i++) {
+    const th = i * Math.PI / 2 + Math.PI / 4;
+    const r0 = r * 1.5, r1 = r * (2.15 + pointer.press * 0.8);
     ctx.beginPath();
-    ctx.moveTo(pointer.x + Math.cos(a + off) * r0, pointer.y + Math.sin(a + off) * r0);
-    ctx.lineTo(pointer.x + Math.cos(a + off) * r1, pointer.y + Math.sin(a + off) * r1);
+    ctx.moveTo(pointer.x + Math.cos(th) * r0, pointer.y + Math.sin(th) * r0);
+    ctx.lineTo(pointer.x + Math.cos(th) * r1, pointer.y + Math.sin(th) * r1);
     ctx.stroke();
   }
+  ctx.globalAlpha = pointer.aim;
+  ctx.fillStyle = PAL.ink;
+  ctx.beginPath();
+  ctx.arc(pointer.x, pointer.y, lw * 1.1, 0, TAU);
+  ctx.fill();
+  ctx.restore();
   ctx.globalAlpha = 1;
 }
 
@@ -1258,7 +1289,7 @@ function drawCursorEnergy() {
    9 · POINTER + LOOP
    ══════════════════════════════════════════════════════════════════════════ */
 
-const pointer = { x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, speed: 0, on: false, down: false, ghost: false, t: rnd(0, 100) };
+const pointer = { x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, speed: 0, on: false, down: false, ghost: false, aim: 0, press: 0, t: rnd(0, 100) };
 let lastEject = 0;
 
 function ghostStep(dt, now) {
@@ -1324,7 +1355,7 @@ function frame(now) {
   drawType(dt);
   drawFx();
   drawBodies();
-  drawCursorEnergy();
+  drawCursorEnergy(dt);
 
   pointer.speed *= 0.86;
 }
@@ -1530,11 +1561,15 @@ cvs.addEventListener('pointerdown', (e) => {
   pointer.ghost = false; pointer.on = true; pointer.down = true;
   pointer.x = p.x; pointer.y = p.y;
   touch(); silenceHint();
+  pointer.press = 1;
   blast(p.x, p.y, 1);
   cvs.setPointerCapture && cvs.setPointerCapture(e.pointerId);
 });
 
-cvs.addEventListener('pointerup', () => { pointer.down = false; });
+cvs.addEventListener('pointerup', (e) => {
+  pointer.down = false;
+  if (e.pointerType === 'touch') pointer.on = false;   // no hover on touch, so let the reticle go
+});
 cvs.addEventListener('pointerleave', () => { pointer.on = false; });
 cvs.addEventListener('pointercancel', () => { pointer.down = false; pointer.on = false; });
 window.addEventListener('blur', () => { pointer.on = false; pointer.down = false; });
