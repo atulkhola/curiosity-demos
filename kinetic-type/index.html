@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Kinetic type · blast center</title>
+<meta name="theme-color" content="#f2b441" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #f2b441;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    color: #111;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+  .hud {
+    position: fixed;
+    left: 1rem;
+    bottom: 1rem;
+    z-index: 3;
+    width: min(19.5rem, calc(100vw - 2rem));
+    padding: 0.9rem 1rem 1rem;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.78);
+    border: 1px solid rgba(0,0,0,0.12);
+    backdrop-filter: blur(14px) saturate(1.15);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.18);
+    pointer-events: auto;
+  }
+  .hud h1 {
+    font-size: 0.92rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.15rem;
+  }
+  .hud .sub {
+    font-size: 0.68rem;
+    opacity: 0.62;
+    line-height: 1.35;
+    margin-bottom: 0.75rem;
+  }
+  .hud .sub a { color: #1a4fd6; }
+  .row {
+    display: grid;
+    grid-template-columns: 4.6rem 1fr;
+    gap: 0.45rem;
+    align-items: center;
+    margin-bottom: 0.45rem;
+  }
+  .row label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+  }
+  .row input[type="text"] {
+    width: 100%;
+    border: 1px solid rgba(0,0,0,0.16);
+    border-radius: 8px;
+    padding: 0.35rem 0.5rem;
+    font: inherit;
+    font-size: 0.82rem;
+    background: rgba(255,255,255,0.9);
+  }
+  .row input[type="color"] {
+    width: 100%;
+    height: 1.55rem;
+    border: 1px solid rgba(0,0,0,0.16);
+    border-radius: 8px;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .row input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.14);
+    outline: none;
+  }
+  .row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #111;
+    cursor: pointer;
+  }
+  .btns {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
+  }
+  .btns button {
+    flex: 1;
+    border: 1px solid rgba(0,0,0,0.18);
+    background: #111;
+    color: #fff;
+    border-radius: 9px;
+    padding: 0.45rem 0.5rem;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btns button.ghost {
+    background: rgba(255,255,255,0.65);
+    color: #111;
+  }
+  .hint {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.55;
+    pointer-events: none;
+    background: rgba(255,255,255,0.55);
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+</style>
+</head>
+<body>
+  <div class="hint">Drag the blast center · tap to re-seed</div>
+  <canvas id="c"></canvas>
+  <aside class="hud">
+    <h1>Kinetic type · blast</h1>
+    <p class="sub">
+      Interactive explosion center around display type.
+      Inspired by <a href="https://www.instagram.com/p/DdZx5iIGK58/" rel="noopener" target="_blank">@kiel.d.m</a>
+      / Space Type Generator R&amp;D — first-pass toy, not STG.
+    </p>
+    <div class="row">
+      <label for="txt">Text</label>
+      <input id="txt" type="text" value="POW!" maxlength="24" autocomplete="off" spellcheck="false" />
+    </div>
+    <div class="row">
+      <label for="fill">Fill</label>
+      <input id="fill" type="color" value="#ffffff" />
+    </div>
+    <div class="row">
+      <label for="bg">Bkgd</label>
+      <input id="bg" type="color" value="#f2b441" />
+    </div>
+    <div class="row">
+      <label for="stroke">Stroke</label>
+      <input id="stroke" type="color" value="#111111" />
+    </div>
+    <div class="row">
+      <label for="detail">Detail</label>
+      <input id="detail" type="range" min="8" max="48" value="22" />
+    </div>
+    <div class="row">
+      <label for="strength">Strength</label>
+      <input id="strength" type="range" min="10" max="100" value="58" />
+    </div>
+    <div class="row">
+      <label for="weight">Weight</label>
+      <input id="weight" type="range" min="8" max="80" value="36" />
+    </div>
+    <div class="btns">
+      <button type="button" id="burst">Burst</button>
+      <button type="button" class="ghost" id="recenter">Recenter</button>
+    </div>
+  </aside>
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    w: 0, h: 0, dpr: 1,
+    cx: 0, cy: 0,
+    dragging: false,
+    t: 0,
+    seed: Math.random() * 1e9,
+    blast: 0,
+    letters: [],
+    rays: [],
+  };
+
+  const rng = (s) => {
+    let x = Math.sin(s) * 10000;
+    return x - Math.floor(x);
+  };
+
+  function resize() {
+    state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    state.w = window.innerWidth;
+    state.h = window.innerHeight;
+    canvas.width = Math.floor(state.w * state.dpr);
+    canvas.height = Math.floor(state.h * state.dpr);
+    canvas.style.width = state.w + "px";
+    canvas.style.height = state.h + "px";
+    ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+    if (!state.cx && !state.cy) {
+      state.cx = state.w * 0.5;
+      state.cy = state.h * 0.48;
+    }
+    rebuild();
+  }
+
+  function rebuild() {
+    const text = ($("txt").value || "POW!").toUpperCase();
+    const detail = +$("detail").value;
+    const strength = +$("strength").value;
+    const weight = +$("weight").value;
+    const fontSize = Math.min(state.w, state.h) * (0.18 + Math.min(text.length, 12) * -0.004);
+    const font = `900 ${Math.max(64, fontSize)}px "Arial Black", Impact, system-ui, sans-serif`;
+
+    // Measure letters
+    ctx.font = font;
+    const metrics = [];
+    let total = 0;
+    for (const ch of text) {
+      const m = ctx.measureText(ch);
+      const ww = m.width;
+      metrics.push({ ch, w: ww });
+      total += ww;
+    }
+    const tracking = Math.max(4, fontSize * 0.02);
+    total += tracking * Math.max(0, text.length - 1);
+    let x = (state.w - total) / 2;
+    const baseline = state.h * 0.52;
+    state.letters = metrics.map((m, i) => {
+      const lx = x + m.w / 2;
+      x += m.w + tracking;
+      const ang = (rng(state.seed + i * 17.3) - 0.5) * 0.18;
+      return {
+        ch: m.ch,
+        x: lx,
+        y: baseline,
+        w: m.w,
+        ang0: ang,
+        phase: rng(state.seed + i * 9.1) * Math.PI * 2,
+        font,
+      };
+    });
+
+    // Starburst rays around blast center (cartoon explosion silhouette)
+    const n = detail;
+    state.rays = [];
+    for (let i = 0; i < n; i++) {
+      const a0 = (i / n) * Math.PI * 2;
+      const a1 = ((i + 0.5) / n) * Math.PI * 2;
+      const rIn = 28 + rng(state.seed + i) * 18;
+      const rOut = rIn + strength * (0.55 + rng(state.seed + i * 3.7) * 1.35);
+      const rMid = (rIn + rOut) * (0.45 + rng(state.seed + i * 5.1) * 0.35);
+      const wobble = (rng(state.seed + i * 2.2) - 0.5) * 0.22;
+      state.rays.push({ a0: a0 + wobble, a1: a1 - wobble * 0.5, rIn, rOut, rMid, phase: rng(state.seed + i * 11) * Math.PI * 2 });
+    }
+    state.strokeW = weight / 10;
+  }
+
+  function pointer(e) {
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX, y: t.clientY };
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    const p = pointer(e);
+    state.dragging = true;
+    state.cx = p.x;
+    state.cy = p.y;
+    state.blast = 1;
+    canvas.setPointerCapture?.(e.pointerId);
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!state.dragging) return;
+    const p = pointer(e);
+    state.cx = p.x;
+    state.cy = p.y;
+  });
+  const endDrag = () => { state.dragging = false; };
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  $("txt").addEventListener("input", rebuild);
+  ["detail", "strength", "weight"].forEach((id) => $(id).addEventListener("input", rebuild));
+  $("burst").addEventListener("click", () => {
+    state.seed = Math.random() * 1e9;
+    state.blast = 1.2;
+    rebuild();
+  });
+  $("recenter").addEventListener("click", () => {
+    state.cx = state.w * 0.5;
+    state.cy = state.h * 0.48;
+    state.blast = 0.8;
+  });
+
+  function drawRayBurst(cx, cy, scale) {
+    const fill = $("fill").value;
+    const stroke = $("stroke").value;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.beginPath();
+    state.rays.forEach((r, i) => {
+      const pulse = 1 + Math.sin(state.t * 2.2 + r.phase) * 0.04 * scale;
+      const breath = 1 + state.blast * 0.25;
+      const rIn = r.rIn * pulse;
+      const rOut = r.rOut * pulse * breath * scale;
+      const rMid = r.rMid * pulse * breath * scale;
+      const ax = Math.cos(r.a0), ay = Math.sin(r.a0);
+      const bx = Math.cos(r.a1), by = Math.sin(r.a1);
+      const mx = Math.cos((r.a0 + r.a1) / 2), my = Math.sin((r.a0 + r.a1) / 2);
+      if (i === 0) ctx.moveTo(ax * rIn, ay * rIn);
+      else ctx.lineTo(ax * rIn, ay * rIn);
+      // outer point via quadratic for organic edge
+      ctx.quadraticCurveTo(mx * rMid * 0.85, my * rMid * 0.85, mx * rOut, my * rOut);
+      ctx.quadraticCurveTo(mx * rMid * 0.85, my * rMid * 0.85, bx * rIn, by * rIn);
+    });
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = state.strokeW;
+    ctx.lineJoin = "round";
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawLetters() {
+    const stroke = $("stroke").value;
+    const fill = $("fill").value;
+    const strength = +$("strength").value;
+    state.letters.forEach((L, i) => {
+      const dx = L.x - state.cx;
+      const dy = L.y - state.cy;
+      const dist = Math.hypot(dx, dy) + 1;
+      const influence = Math.max(0, 1 - dist / (Math.min(state.w, state.h) * 0.55));
+      const kick = influence * (strength / 100) * (18 + state.blast * 40);
+      const nx = dx / dist, ny = dy / dist;
+      const jx = Math.sin(state.t * 6 + L.phase) * kick * 0.15;
+      const jy = Math.cos(state.t * 5.3 + L.phase) * kick * 0.12;
+      const ox = nx * kick + jx;
+      const oy = ny * kick + jy;
+      const rot = L.ang0 + influence * (strength / 100) * 0.35 * Math.sin(state.t * 3 + L.phase);
+
+      ctx.save();
+      ctx.translate(L.x + ox, L.y + oy);
+      ctx.rotate(rot);
+      ctx.font = L.font;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = state.strokeW * 1.1;
+      ctx.strokeStyle = stroke;
+      ctx.fillStyle = fill;
+      ctx.strokeText(L.ch, 0, 0);
+      ctx.fillText(L.ch, 0, 0);
+      ctx.restore();
+    });
+  }
+
+  function frame(now) {
+    state.t = now / 1000;
+    state.blast = Math.max(0, state.blast - 0.018);
+
+    const bg = $("bg").value;
+    document.body.style.background = bg;
+    ctx.clearRect(0, 0, state.w, state.h);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, state.w, state.h);
+
+    // soft vignette
+    const g = ctx.createRadialGradient(state.cx, state.cy, 40, state.cx, state.cy, Math.max(state.w, state.h) * 0.7);
+    g.addColorStop(0, "rgba(255,255,255,0.12)");
+    g.addColorStop(1, "rgba(0,0,0,0.06)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, state.w, state.h);
+
+    const scale = 1 + state.blast * 0.35;
+    drawRayBurst(state.cx, state.cy, scale);
+
+    // tiny center eye
+    ctx.save();
+    ctx.translate(state.cx, state.cy);
+    ctx.beginPath();
+    ctx.arc(0, 0, 7 + state.blast * 6, 0, Math.PI * 2);
+    ctx.fillStyle = $("stroke").value;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(2.2, -2.2, 2.4, 0, Math.PI * 2);
+    ctx.fillStyle = $("fill").value;
+    ctx.fill();
+    ctx.restore();
+
+    drawLetters();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
