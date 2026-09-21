@@ -209,6 +209,7 @@ const PALETTES = {
 };
 
 const DEFAULT_PHRASE = 'A NEW / HISTORY / IS HERE / FOR / BEFORE / ANYONE';
+const PACK = 0.86;              // contact spacing: letters overlap a little
 const MAX_OUT = 14;            // bubbles alive at once; older ones deflate home
 const EJECT_GAP = 0.20;        // s between hover knock-outs
 const GHOST_GAP = 2.6;         // the unattended demo loop knocks far more slowly
@@ -777,8 +778,7 @@ let lastInput = 0;
 const touch = () => { lastInput = performance.now() / 1000; };
 
 function spriteFor(b) {
-  if (b.kind === 'letter') return bubbleSprite(b.ch, b.color, L.spriteS);
-  return b.sprite || (b.sprite = accentSprite(b.kind, L.bubbleFs * 0.62, b.seed));
+  return b.kind === 'letter' ? bubbleSprite(b.ch, b.color, L.spriteS) : b.sprite;
 }
 
 function eject(cell, cxp, cyp, power, slot) {
@@ -821,6 +821,19 @@ function addAccent(kind, x, y, seed) {
   b.hw = b.r; b.hh = b.r;
   bodies.push(b);
   return b;
+}
+
+/* Blasts fling extra gloves in; without a cap they pile up over a long session
+   and bury the letters. Ones thrown during play retire before the seeded set. */
+function capAccents() {
+  const acc = bodies.filter(b => b.kind !== 'letter');
+  if (acc.length <= 5) return;
+  acc.sort((a, b) => (a.seeded ? 1 : 0) - (b.seeded ? 1 : 0) || a.id - b.id);
+  for (let i = 0; i < acc.length - 5; i++) {
+    acc[i].dead = true;
+    const k = bodies.indexOf(acc[i]);
+    if (k >= 0) bodies.splice(k, 1);
+  }
 }
 
 /* Gloves and trinkets ride along with the nearest letter instead of colliding
@@ -879,6 +892,7 @@ function sendHome(b) {
 function integrate(dt) {
   const g = L.fs * 12;
   const R = L.fs * 1.15;
+  const nowS = performance.now() / 1000;
   const pushing = seeding ? 0 : (pointer.on && !pointer.ghost ? 1 : (pointer.ghost ? 0.26 : 0));
 
   for (const b of bodies) {
@@ -932,8 +946,8 @@ function integrate(dt) {
         if (a.asleep && c.asleep) continue;
         let dx = c.x - a.x, dy = c.y - a.y;
         let d2 = dx * dx + dy * dy;
-        const rr = (a.r + c.r) * 0.92;
-        if (d2 >= rr * rr || d2 < 1e-6) continue;
+        const rr = (a.r + c.r) * PACK;   // matches how the heap is composed, so a
+        if (d2 >= rr * rr || d2 < 1e-6) continue;   // settled heap needs no resolve
         const d = Math.sqrt(d2);
         const nx = dx / d, ny = dy / d;
         const pen = rr - d;
@@ -1007,7 +1021,9 @@ function integrate(dt) {
         b.vx = 0; b.vy = 0; b.spin = 0; b.asleep = true;
       }
     }
-    if (!b.slot && b.kind === 'letter' && b.rest > 3.2) sendHome(b);
+    // strays deflate home once they settle, and unconditionally once the page has
+    // been quiet for a while — the phrase always comes back
+    if (!b.slot && b.kind === 'letter' && (b.rest > 3.2 || (restoring && nowS - b.born > 7))) sendHome(b);
   }
 
   // returning letters
@@ -1083,8 +1099,9 @@ function blast(x, y, strength) {
   const near = L.cells.filter(c => !c.out && !c.anchored && Math.hypot(c.cx - x, c.cy - y) < L.fs * 1.05 * strength);
   near.sort((a, b2) => Math.hypot(a.cx - x, a.cy - y) - Math.hypot(b2.cx - x, b2.cy - y));
   near.slice(0, 4).forEach(c => eject(c, x, y, 5.5 * strength));
-  if (Math.random() < 0.55 && bodies.length < MAX_OUT + 6) {
+  if (Math.random() < 0.4) {
     addAccent(Math.random() < 0.5 ? 'mitt' : 'mitt2', x + rnd(-40, 40), y, Math.random());
+    capAccents();
   }
   Sound.boom();
 }
@@ -1418,7 +1435,6 @@ function seedScene() {
   // Bodies are packed bottom-up in contact terms — each letter one collision
   // radius from the next — so the heap opens at rest and gravity has nothing to
   // collapse. Reverse reading order puts the last line on the floor.
-  const PACK = 0.86;
   const packed = [];
   for (let ri = rows.length - 1; ri >= 0; ri--) {     // last line ends up on the floor
     const made = [];
@@ -1459,6 +1475,7 @@ function seedScene() {
   const tuck = (kind, fx2, fy, seed, z) => {
     const a = addAccent(kind, x0 + hw * fx2, y0 + hh * fy, seed);
     a.z = z; a.vx = 0; a.vy = 0; a.spin = 0; a.ang = (seed - 0.5) * 0.9;
+    a.seeded = true;
     attachToNearest(a);
   };
   tuck('mitt', 0.80, 0.16, 0.35, -1);
