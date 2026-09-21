@@ -1074,9 +1074,37 @@ function spawnDots(x, y, n) {
   }
 }
 
+/* A ring of overlapping lobes, stroked heavy then filled white so only the union
+   outline survives — the explosion centre from the source video. */
+function cloudSprite(r, seed) {
+  const pad = r * 0.28;
+  const c = document.createElement('canvas');
+  c.width = Math.ceil((r * 2 + pad * 2) * DPR);
+  c.height = Math.ceil((r * 1.9 + pad * 2) * DPR);
+  const g = c.getContext('2d');
+  g.scale(DPR, DPR);
+  g.translate(r + pad, r * 0.95 + pad);
+  g.rotate(seed * 0.3);
+  g.beginPath();
+  const lobes = 9;
+  for (let i = 0; i < lobes; i++) {
+    const a = i / lobes * TAU;
+    const rr = r * (0.62 + 0.16 * Math.sin(i * 2.3 + seed));
+    const lr = r * (0.40 + 0.10 * Math.sin(i * 1.7 + seed * 2));
+    const x = Math.cos(a) * rr, y = Math.sin(a) * rr * 0.88;
+    g.moveTo(x + lr, y);
+    g.arc(x, y, lr, 0, TAU);
+  }
+  g.lineWidth = Math.max(2.5, L.fs * 0.055);
+  g.strokeStyle = PAL.ink; g.lineJoin = 'round'; g.stroke();
+  g.fillStyle = '#fff'; g.fill();
+  return c;
+}
+
 function blast(x, y, strength) {
   waves.push({ x, y, t: 0, life: 0.55, r: L.fs * 3.2 * strength });
-  fx.push({ type: 'burst', x, y, t: 0, life: 0.42, r: L.fs * 0.82 * strength, seed: Math.random() * 10 });
+  const r = L.fs * 0.82 * strength;
+  fx.push({ type: 'burst', x, y, t: 0, life: 0.42, r, sprite: cloudSprite(r, Math.random() * 10) });
   for (let i = 0; i < 12; i++) {
     const a = i / 12 * TAU + rnd(-0.1, 0.1);
     fx.push({ type: 'tick', x, y, a, r0: L.fs * 0.55 * strength, len: L.fs * rnd(0.4, 1.0) * strength, t: 0, life: rnd(0.26, 0.42) });
@@ -1142,26 +1170,12 @@ function drawFx() {
       ctx.lineWidth = Math.max(1, L.fs * 0.016); ctx.strokeStyle = PAL.ink; ctx.stroke();
       ctx.restore();
     } else if (e.type === 'burst') {
-      // Comic blast cloud: a ring of overlapping lobes, stroked heavy and then
-      // filled white so only the union outline survives. It punches a hole in the
-      // black type for a moment — the explosion centre from the source video.
+      // Comic blast cloud, pre-rendered so fading it out fades the whole shape.
+      // Drawn live it would go translucent and show its own construction circles.
       const g = 0.45 + easeOut(p) * 0.70;
+      const w2 = e.sprite.width / DPR, h2 = e.sprite.height / DPR;
       ctx.globalAlpha = p < 0.72 ? 1 : 1 - (p - 0.72) / 0.28;
-      ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.seed * 0.3);
-      ctx.beginPath();
-      const lobes = 9;
-      for (let i = 0; i < lobes; i++) {
-        const a = i / lobes * TAU;
-        const rr = e.r * g * (0.62 + 0.16 * Math.sin(i * 2.3 + e.seed));
-        const lr = e.r * g * (0.40 + 0.10 * Math.sin(i * 1.7 + e.seed * 2));
-        const x = Math.cos(a) * rr, y = Math.sin(a) * rr * 0.88;
-        ctx.moveTo(x + lr, y);
-        ctx.arc(x, y, lr, 0, TAU);
-      }
-      ctx.lineWidth = Math.max(2.5, L.fs * 0.055 * (1 - p * 0.3));
-      ctx.strokeStyle = PAL.ink; ctx.lineJoin = 'round'; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.fill();
-      ctx.restore();
+      ctx.drawImage(e.sprite, e.x - w2 * g / 2, e.y - h2 * g / 2, w2 * g, h2 * g);
     }
   }
   ctx.globalAlpha = 1;
