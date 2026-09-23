@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Progressive Blur — Curiosity</title>
+  <style>
+    :root {
+      --bg: #0a0b0f;
+      --ink: #f4f5f7;
+      --muted: rgba(244,245,247,0.62);
+      --accent: #7dd3fc;
+      --card: rgba(255,255,255,0.08);
+      --stroke: rgba(255,255,255,0.12);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+      --blur-max: 28px;
+      --fade-h: 140px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    body { overflow: hidden; }
+
+    .phone {
+      width: min(390px, 100%);
+      height: min(844px, 100dvh);
+      margin: 0 auto;
+      position: relative;
+      background:
+        radial-gradient(120% 80% at 20% 0%, #1e3a5f 0%, transparent 55%),
+        radial-gradient(90% 70% at 100% 30%, #3b1d4a 0%, transparent 50%),
+        linear-gradient(180deg, #12141c, #0a0b0f);
+      overflow: hidden;
+      border-radius: 0;
+    }
+    @media (min-width: 420px) {
+      body { display: grid; place-items: center; padding: 1rem; }
+      .phone {
+        border-radius: 36px;
+        border: 1px solid var(--stroke);
+        box-shadow: 0 30px 80px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
+      }
+    }
+
+    .bg-photo {
+      position: absolute; inset: 0; z-index: 0;
+      background:
+        linear-gradient(180deg, rgba(10,11,15,0.15), rgba(10,11,15,0.85)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='1200'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%23f97316'/%3E%3Cstop offset='.45' stop-color='%23ec4899'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='800' height='1200'/%3E%3Ccircle cx='180' cy='220' r='120' fill='%23fde68a' fill-opacity='.35'/%3E%3Ccircle cx='620' cy='480' r='180' fill='%23a5f3fc' fill-opacity='.28'/%3E%3Ccircle cx='300' cy='900' r='200' fill='%23c084fc' fill-opacity='.3'/%3E%3C/svg%3E") center/cover;
+      filter: saturate(1.15);
+    }
+
+    .scroll {
+      position: absolute; inset: 0; z-index: 1;
+      overflow-y: auto; overscroll-behavior: contain;
+      padding: calc(88px + var(--safe-top)) 16px calc(110px + var(--safe-bot));
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    .scroll::-webkit-scrollbar { width: 0; }
+
+    .hero {
+      padding: 8px 4px 20px;
+    }
+    .eyebrow {
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--accent); font-weight: 650; margin-bottom: 8px;
+    }
+    h1 {
+      margin: 0 0 8px; font-size: 1.85rem; letter-spacing: -0.03em; line-height: 1.1;
+      font-weight: 700;
+    }
+    .lede { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.45; max-width: 28ch; }
+
+    .stack { display: grid; gap: 14px; }
+
+    .card {
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      backdrop-filter: blur(18px) saturate(1.4);
+      -webkit-backdrop-filter: blur(18px) saturate(1.4);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+      transition: transform 0.25s ease, border-color 0.2s;
+    }
+    .card:active { transform: scale(0.985); }
+    .card-media {
+      height: 148px;
+      background-size: cover; background-position: center;
+      position: relative;
+    }
+    .card-media::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.55));
+    }
+    .card-body { padding: 14px 16px 16px; }
+    .card-meta { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .card-title { font-size: 1.05rem; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
+    .card-sub { margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
+
+    .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .pill {
+      font-size: 11px; padding: 5px 10px; border-radius: 999px;
+      background: rgba(255,255,255,0.08); border: 1px solid var(--stroke); color: var(--muted);
+    }
+
+    /* Progressive blur edge — CSS approximation of ProgressiveBlurView */
+    .edge-blur {
+      position: absolute; left: 0; right: 0; z-index: 5;
+      pointer-events: none;
+      height: var(--fade-h);
+      --intensity: 1;
+    }
+    .edge-blur.top { top: 0; }
+    .edge-blur.bottom { bottom: 0; transform: scaleY(-1); }
+
+    .edge-blur .layer {
+      position: absolute; inset: 0;
+      backdrop-filter: blur(calc(var(--blur-max) * var(--l) * var(--intensity))) saturate(1.2);
+      -webkit-backdrop-filter: blur(calc(var(--blur-max) * var(--l) * var(--intensity))) saturate(1.2);
+      mask-image: linear-gradient(
+        to bottom,
+        #000 0%,
+        #000 calc(var(--start) * 100%),
+        transparent calc(var(--end) * 100%)
+      );
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        #000 0%,
+        #000 calc(var(--start) * 100%),
+        transparent calc(var(--end) * 100%)
+      );
+      background: linear-gradient(
+        to bottom,
+        rgba(10,11,15, calc(0.55 * var(--intensity) * var(--l))) 0%,
+        transparent 100%
+      );
+    }
+
+    .chrome-top, .chrome-bot {
+      position: absolute; left: 0; right: 0; z-index: 6;
+      pointer-events: none;
+    }
+    .chrome-top {
+      top: 0; padding: calc(14px + var(--safe-top)) 18px 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .chrome-bot {
+      bottom: 0; padding: 10px 28px calc(18px + var(--safe-bot));
+      display: flex; justify-content: space-around; align-items: center;
+    }
+    .nav-title { font-weight: 650; font-size: 0.95rem; letter-spacing: -0.01em; }
+    .nav-btn {
+      pointer-events: auto;
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: var(--ink); display: grid; place-items: center; cursor: pointer;
+      font-size: 14px;
+    }
+    .tab {
+      pointer-events: auto;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      color: var(--muted); font-size: 10px; font-weight: 600; text-decoration: none;
+      padding: 6px 10px; border-radius: 12px; border: 0; background: transparent; cursor: pointer;
+    }
+    .tab.active { color: var(--ink); }
+    .tab .ico { font-size: 18px; line-height: 1; }
+
+    .controls {
+      position: absolute; right: 12px; bottom: calc(100px + var(--safe-bot));
+      z-index: 8; display: grid; gap: 8px; pointer-events: auto;
+    }
+    .ctrl {
+      font-size: 11px; padding: 8px 10px; border-radius: 12px;
+      border: 1px solid var(--stroke); background: rgba(20,22,30,0.7);
+      backdrop-filter: blur(10px); color: var(--ink); cursor: pointer;
+      text-align: left; min-width: 118px;
+    }
+    .ctrl strong { display: block; font-size: 12px; margin-bottom: 2px; }
+    .ctrl span { opacity: 0.65; }
+
+    .re {
+      margin-top: 8px; padding: 14px 16px; border-radius: 16px;
+      border: 1px dashed rgba(125,211,252,0.35);
+      background: rgba(125,211,252,0.06);
+      font-size: 0.78rem; color: var(--muted); line-height: 1.45;
+    }
+    .re b { color: var(--ink); }
+  </style>
+</head>
+<body>
+  <div class="phone" id="app">
+    <div class="bg-photo" aria-hidden="true"></div>
+
+    <div class="scroll" id="scroll">
+      <div class="hero">
+        <div class="eyebrow">expo-backdrop · web approx</div>
+        <h1>Progressive blur</h1>
+        <p class="lede">Scroll the event cards. Top & bottom edges fade with stacked backdrop-filter masks — CSS stand-in for ProgressiveBlurView.</p>
+      </div>
+
+      <div class="stack" id="cards"></div>
+
+      <div class="re">
+        <b>RE tip:</b> Native expo-backdrop uses public iOS/Android blur APIs + scroll-edge fade.
+        Web can’t sample the scrollbar buffer the same way — we stack masked
+        <code>backdrop-filter</code> layers + a tint wash. Toggle intensity / startOffset below.
+      </div>
+    </div>
+
+    <!-- Progressive blur edges -->
+    <div class="edge-blur top" id="blurTop" aria-hidden="true"></div>
+    <div class="edge-blur bottom" id="blurBot" aria-hidden="true"></div>
+
+    <div class="chrome-top">
+      <button class="nav-btn" type="button" aria-label="Back">‹</button>
+      <div class="nav-title">Tonight</div>
+      <button class="nav-btn" type="button" aria-label="Search">⌕</button>
+    </div>
+    <div class="chrome-bot">
+      <button class="tab active" type="button"><span class="ico">⌂</span>Home</button>
+      <button class="tab" type="button"><span class="ico">◇</span>Explore</button>
+      <button class="tab" type="button"><span class="ico">♥</span>Saved</button>
+      <button class="tab" type="button"><span class="ico">☺</span>You</button>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl" type="button" id="btnIntensity"><strong>Intensity</strong><span>80</span></button>
+      <button class="ctrl" type="button" id="btnEdge"><strong>Edge</strong><span>top + bottom</span></button>
+      <button class="ctrl" type="button" id="btnStart"><strong>startOffset</strong><span>0.15</span></button>
+    </div>
+  </div>
+
+  <script>
+    const events = [
+      { title: "Rooftop synth night", meta: "FRI · 9:00 PM", sub: "Warehouse 12 · East Side", hue: "linear-gradient(135deg,#f97316,#db2777)" },
+      { title: "Ceramic workshop", meta: "SAT · 11:00 AM", sub: "Clay & Co · Studio B", hue: "linear-gradient(135deg,#34d399,#0ea5e9)" },
+      { title: "Film stills walk", meta: "SAT · 4:30 PM", sub: "Old town alleys", hue: "linear-gradient(135deg,#a78bfa,#6366f1)" },
+      { title: "Neon dumpling club", meta: "SUN · 7:00 PM", sub: "Lantern Lane", hue: "linear-gradient(135deg,#fbbf24,#f43f5e)" },
+      { title: "Dawn yoga deck", meta: "MON · 6:15 AM", sub: "Harbor pier", hue: "linear-gradient(135deg,#67e8f9,#818cf8)" },
+      { title: "Vinyl listening bar", meta: "TUE · 8:00 PM", sub: "Basement 4", hue: "linear-gradient(135deg,#fb7185,#c026d3)" },
+      { title: "Sketch crawl", meta: "WED · 5:00 PM", sub: "Museum steps", hue: "linear-gradient(135deg,#4ade80,#14b8a6)" },
+      { title: "Late comedy mic", meta: "THU · 10:00 PM", sub: "Red Room", hue: "linear-gradient(135deg,#fde047,#ea580c)" },
+    ];
+
+    const cards = document.getElementById("cards");
+    events.forEach((e, i) => {
+      const el = document.createElement("article");
+      el.className = "card";
+      el.innerHTML = `
+        <div class="card-media" style="background-image:${e.hue}"></div>
+        <div class="card-body">
+          <div class="card-meta">${e.meta}</div>
+          <h2 class="card-title">${e.title}</h2>
+          <p class="card-sub">${e.sub}</p>
+          <div class="pill-row">
+            <span class="pill">Friends</span>
+            <span class="pill">${12 + i * 3} going</span>
+            <span class="pill">Frosted</span>
+          </div>
+        </div>`;
+      cards.appendChild(el);
+    });
+
+    // Build progressive blur layers (stacked masks ≈ ProgressiveBlurView)
+    function buildBlur(el, intensity, startOffset) {
+      el.innerHTML = "";
+      el.style.setProperty("--intensity", intensity);
+      const steps = 8;
+      for (let i = 1; i <= steps; i++) {
+        const layer = document.createElement("div");
+        layer.className = "layer";
+        const t = i / steps;
+        layer.style.setProperty("--l", String(t * t)); // quadratic ramp
+        const start = startOffset * (1 - t * 0.35);
+        const end = Math.min(1, start + 0.35 + t * 0.4);
+        layer.style.setProperty("--start", start.toFixed(3));
+        layer.style.setProperty("--end", end.toFixed(3));
+        el.appendChild(layer);
+      }
+    }
+
+    const state = { intensity: 0.85, edge: "both", start: 0.15 };
+    const blurTop = document.getElementById("blurTop");
+    const blurBot = document.getElementById("blurBot");
+
+    function renderBlur() {
+      buildBlur(blurTop, state.intensity, state.start);
+      buildBlur(blurBot, state.intensity, state.start);
+      blurTop.style.display = state.edge === "bottom" ? "none" : "block";
+      blurBot.style.display = state.edge === "top" ? "none" : "block";
+      // scroll-edge: strengthen when content under edge
+      const sc = document.getElementById("scroll");
+      const topAmt = Math.min(1, sc.scrollTop / 40);
+      const botAmt = Math.min(1, (sc.scrollHeight - sc.scrollTop - sc.clientHeight) / 40);
+      blurTop.style.setProperty("--intensity", (state.intensity * (0.35 + 0.65 * topAmt)).toFixed(3));
+      blurBot.style.setProperty("--intensity", (state.intensity * (0.35 + 0.65 * botAmt)).toFixed(3));
+    }
+
+    document.getElementById("scroll").addEventListener("scroll", renderBlur, { passive: true });
+
+    const intensities = [0.4, 0.65, 0.85, 1];
+    let iIdx = 2;
+    document.getElementById("btnIntensity").addEventListener("click", () => {
+      iIdx = (iIdx + 1) % intensities.length;
+      state.intensity = intensities[iIdx];
+      document.querySelector("#btnIntensity span").textContent = String(Math.round(state.intensity * 100));
+      renderBlur();
+    });
+
+    const edges = ["both", "top", "bottom"];
+    let eIdx = 0;
+    document.getElementById("btnEdge").addEventListener("click", () => {
+      eIdx = (eIdx + 1) % edges.length;
+      state.edge = edges[eIdx];
+      document.querySelector("#btnEdge span").textContent =
+        state.edge === "both" ? "top + bottom" : state.edge;
+      renderBlur();
+    });
+
+    const starts = [0, 0.15, 0.3, 0.45];
+    let sIdx = 1;
+    document.getElementById("btnStart").addEventListener("click", () => {
+      sIdx = (sIdx + 1) % starts.length;
+      state.start = starts[sIdx];
+      document.querySelector("#btnStart span").textContent = state.start.toFixed(2);
+      renderBlur();
+    });
+
+    renderBlur();
+  </script>
+</body>
+</html>

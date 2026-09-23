@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fun Concierge Moodboard — Curiosity</title>
+  <style>
+    :root {
+      --bg: #1a120e;
+      --paper: #fff6ea;
+      --ink: #2a1810;
+      --coral: #ff6b4a;
+      --butter: #ffd56a;
+      --mint: #7ddeca;
+      --lilac: #c4a1ff;
+      --sky: #7ec8ff;
+      --tomato: #ff3d5a;
+      --olive: #8fbc5a;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; min-height: 100%;
+      background: var(--bg);
+      color: var(--paper);
+      font-family: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    }
+    body {
+      background:
+        radial-gradient(ellipse 80% 50% at 10% 0%, #3d2218 0%, transparent 55%),
+        radial-gradient(ellipse 60% 40% at 90% 20%, #2a1f3d 0%, transparent 50%),
+        var(--bg);
+    }
+
+    header {
+      padding: 1.5rem 1.25rem 0.75rem;
+      max-width: 1100px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+      justify-content: space-between;
+    }
+    .brand .eyebrow {
+      font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--butter); font-weight: 700; margin-bottom: 6px;
+    }
+    h1 {
+      margin: 0; font-size: clamp(1.6rem, 4vw, 2.4rem);
+      letter-spacing: -0.03em; line-height: 1.05; font-weight: 800;
+    }
+    h1 span { color: var(--coral); }
+    .lede {
+      margin: 8px 0 0; max-width: 42ch; opacity: 0.72; font-size: 0.9rem; line-height: 1.45;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .actions button {
+      font: inherit; font-size: 12px; font-weight: 700;
+      border: 2px solid rgba(255,246,234,0.2); background: transparent;
+      color: var(--paper); border-radius: 999px; padding: 8px 14px; cursor: pointer;
+    }
+    .actions button:hover, .actions button.on {
+      background: var(--butter); color: var(--ink); border-color: var(--butter);
+    }
+
+    .board {
+      max-width: 1100px; margin: 0 auto; padding: 0.75rem 1.25rem 3rem;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: 72px;
+      gap: 12px;
+    }
+
+    .tile {
+      border-radius: 18px; overflow: hidden; position: relative;
+      border: 2px solid rgba(255,246,234,0.08);
+      cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s;
+      min-height: 0;
+    }
+    .tile:hover, .tile:focus-visible {
+      transform: translateY(-3px) rotate(-0.4deg);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+      outline: none;
+      z-index: 2;
+    }
+    .tile:active { transform: scale(0.98); }
+    .tile.selected {
+      outline: 3px solid var(--butter);
+      outline-offset: 2px;
+    }
+
+    .tile.photo { background-size: cover; background-position: center; }
+    .tile.swatch { display: grid; place-items: end start; padding: 12px; }
+    .tile.swatch .label {
+      font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+      background: rgba(26,18,14,0.55); padding: 4px 8px; border-radius: 8px;
+      backdrop-filter: blur(6px);
+    }
+    .tile.type {
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 14px 16px; background: var(--paper); color: var(--ink);
+    }
+    .tile.type .big {
+      font-size: clamp(1.8rem, 5vw, 3.2rem); font-weight: 900;
+      letter-spacing: -0.04em; line-height: 0.9; margin-bottom: 6px;
+    }
+    .tile.type .sub { font-size: 0.75rem; opacity: 0.6; font-weight: 600; }
+    .tile.ui {
+      background: #12100e; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+      border-color: rgba(255,255,255,0.06);
+    }
+    .tile.ui .bar {
+      height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .tile.ui .bar i { display: block; height: 100%; border-radius: inherit; }
+    .tile.ui .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tile.ui .chip {
+      font-size: 10px; font-weight: 700; padding: 5px 9px; border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+    }
+    .tile.ui h3 { margin: 0; font-size: 0.95rem; letter-spacing: -0.02em; }
+    .tile.quote {
+      background: var(--coral); color: #fff; padding: 16px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      font-weight: 800; letter-spacing: -0.02em;
+    }
+    .tile.quote p { margin: 0; font-size: clamp(1rem, 2.5vw, 1.35rem); line-height: 1.2; }
+    .tile.quote small { opacity: 0.8; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* collage spans */
+    .s4 { grid-column: span 4; grid-row: span 3; }
+    .s3 { grid-column: span 3; grid-row: span 2; }
+    .s6 { grid-column: span 6; grid-row: span 3; }
+    .s5 { grid-column: span 5; grid-row: span 2; }
+    .s2 { grid-column: span 2; grid-row: span 2; }
+    .s8 { grid-column: span 8; grid-row: span 2; }
+    .tall { grid-row: span 4; }
+    @media (max-width: 720px) {
+      .board { grid-template-columns: repeat(6, 1fr); grid-auto-rows: 64px; }
+      .s4, .s5, .s6, .s8 { grid-column: span 6; }
+      .s3 { grid-column: span 3; }
+      .s2 { grid-column: span 3; }
+    }
+
+    .drawer {
+      position: fixed; right: 16px; bottom: 16px; left: 16px;
+      max-width: 420px; margin-left: auto;
+      background: var(--paper); color: var(--ink);
+      border-radius: 20px; padding: 16px 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+      transform: translateY(120%); transition: transform 0.28s ease;
+      z-index: 30;
+    }
+    .drawer.open { transform: translateY(0); }
+    .drawer h2 { margin: 0 0 6px; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .drawer p { margin: 0 0 12px; font-size: 0.85rem; line-height: 1.45; opacity: 0.75; }
+    .drawer .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .drawer .sw {
+      width: 28px; height: 28px; border-radius: 8px; border: 2px solid rgba(0,0,0,0.1);
+    }
+    .drawer button {
+      margin-left: auto; font: inherit; font-size: 12px; font-weight: 700;
+      border: 0; background: var(--ink); color: var(--paper);
+      border-radius: 999px; padding: 8px 12px; cursor: pointer;
+    }
+
+    .palette-bar {
+      max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 0.5rem;
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    }
+    .palette-bar span {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      opacity: 0.55; margin-right: 4px;
+    }
+    .dot {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25); cursor: pointer;
+    }
+    .dot:hover { transform: scale(1.15); }
+
+    footer {
+      max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 2.5rem;
+      font-size: 0.78rem; opacity: 0.55; line-height: 1.45;
+    }
+    footer b { opacity: 0.9; color: var(--butter); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="eyebrow">@emsparx vibe · AI concierge</div>
+      <h1>Fun, not <span>sterile</span> purple-AI</h1>
+      <p class="lede">Interactive moodboard — warm lifestyle, loud type, dark cards, playful swatches. Click tiles to inspect. Shuffle for a fresh collage.</p>
+    </div>
+    <div class="actions">
+      <button type="button" id="btnShuffle">Shuffle</button>
+      <button type="button" id="btnWarm" class="on">Warm</button>
+      <button type="button" id="btnNight">Night club</button>
+      <button type="button" id="btnPicnic">Picnic</button>
+    </div>
+  </header>
+
+  <div class="palette-bar" id="paletteBar">
+    <span>Palette</span>
+  </div>
+
+  <div class="board" id="board" aria-label="Moodboard collage"></div>
+
+  <div class="drawer" id="drawer">
+    <h2 id="dTitle">Tile</h2>
+    <p id="dBody">—</p>
+    <div class="row">
+      <div class="sw" id="dSw"></div>
+      <button type="button" id="dClose">Close</button>
+    </div>
+  </div>
+
+  <footer>
+    <b>RE:</b> Emily’s moodboard pushes against default AI-product palettes (cold violet / neon cyan).
+    Stack here is CSS grid collage + clickable tiles + swappable palettes — no generative model.
+    Inspired by https://x.com/emsparx/status/2101957817234002209
+  </footer>
+
+  <script>
+    const palettes = {
+      warm: {
+        name: "Warm concierge",
+        colors: ["#ff6b4a","#ffd56a","#7ddecac".replace(" ",""),"#c4a1ff","#7ec8ff","#fff6ea","#2a1810"],
+        // fix mint typo
+      },
+      night: {
+        name: "Night club",
+        colors: ["#ff3d5a","#c4a1ff","#7ec8ff","#ffd56a","#1a1028","#ff6b4a","#f0e6ff"]
+      },
+      picnic: {
+        name: "Picnic",
+        colors: ["#8fbc5a","#ffd56a","#ff6b4a","#7ec8ff","#fff6ea","#5a3a28","#f4a261"]
+      }
+    };
+    // correct mint
+    palettes.warm.colors[2] = "#7ddeca";
+
+    const photoGrad = (a, b, c) =>
+      `linear-gradient(145deg, ${a}, ${b} 45%, ${c})`;
+
+    function tilesFor(p) {
+      const [c0,c1,c2,c3,c4,c5,c6] = p.colors;
+      return [
+        { kind: "photo", span: "s6", style: `background-image:${photoGrad(c0,c1,c3)}`, title: "Golden hour lobby", body: "Warm lifestyle plate — soft sun, no chrome UI." },
+        { kind: "type", span: "s3 tall", big: "hello.", sub: "Display / editorial", title: "Display type", body: "Big, friendly, slightly imperfect — not Inter-on-purple." },
+        { kind: "swatch", span: "s3", color: c0, label: "CORAL POP", title: "Coral pop", body: c0 },
+        { kind: "ui", span: "s4", title: "Concierge card", body: "Dark glass card with juicy chips — still playful.", chips: ["Tonight", "Walkable", "Spicy"], bar: c1 },
+        { kind: "quote", span: "s5", text: "Tired of typical AI product palettes.", who: "mood note", title: "Manifesto", body: "Keep the UI fun: butter, coral, mint — not sterile violet." },
+        { kind: "swatch", span: "s2", color: c1, label: "BUTTER", title: "Butter", body: c1 },
+        { kind: "swatch", span: "s2", color: c2, label: "MINT", title: "Mint gelato", body: c2 },
+        { kind: "photo", span: "s4", style: `background-image:${photoGrad(c2,c4,c0)}`, title: "City snack run", body: "Lifestyle photo energy — people, food, motion." },
+        { kind: "type", span: "s4", big: "YES!", sub: "Exclaim / CTA", title: "CTA energy", body: "Exclamations beat muted sage microcopy." },
+        { kind: "ui", span: "s4", title: "Itinerary strip", body: "Progress bars in candy colors.", chips: ["09:00", "Brunch", "Gallery"], bar: c3 },
+        { kind: "swatch", span: "s3", color: c3, label: "LILAC FUN", title: "Lilac (fun)", body: "Lilac is ok when it’s candy, not ‘AI purple’." },
+        { kind: "photo", span: "s5", style: `background-image:${photoGrad(c6||c5,c0,c1)}`, title: "Night terrace", body: "Deep warm dark — still inviting." },
+        { kind: "swatch", span: "s2", color: c4, label: "SKY", title: "Sky accent", body: c4 },
+        { kind: "quote", span: "s5", text: "Make the product feel like a friend with taste.", who: "concierge brief", title: "Brief", body: "Personality first; chrome second." },
+      ];
+    }
+
+    const board = document.getElementById("board");
+    const drawer = document.getElementById("drawer");
+    const paletteBar = document.getElementById("paletteBar");
+    let mode = "warm";
+    let order = [];
+
+    function renderPaletteDots() {
+      paletteBar.innerHTML = "<span>Palette</span>";
+      palettes[mode].colors.forEach((c) => {
+        const d = document.createElement("button");
+        d.type = "button";
+        d.className = "dot";
+        d.style.background = c;
+        d.title = c;
+        d.addEventListener("click", () => {
+          navigator.clipboard?.writeText(c);
+          openDrawer({ title: "Copied swatch", body: c, color: c });
+        });
+        paletteBar.appendChild(d);
+      });
+    }
+
+    function render() {
+      const p = palettes[mode];
+      let tiles = tilesFor(p);
+      if (order.length === tiles.length) {
+        tiles = order.map(i => tiles[i]);
+      } else {
+        order = tiles.map((_, i) => i);
+      }
+      board.innerHTML = "";
+      tiles.forEach((t) => {
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = `tile ${t.kind} ${t.span}`;
+        if (t.kind === "photo") el.style.cssText += t.style;
+        if (t.kind === "swatch") {
+          el.style.background = t.color;
+          el.innerHTML = `<span class="label">${t.label}</span>`;
+        } else if (t.kind === "type") {
+          el.innerHTML = `<div class="big">${t.big}</div><div class="sub">${t.sub}</div>`;
+        } else if (t.kind === "ui") {
+          el.innerHTML = `
+            <h3>${t.title}</h3>
+            <div class="bar"><i style="width:${55 + Math.random()*40}%;background:${t.bar}"></i></div>
+            <div class="chips">${t.chips.map(c => `<span class="chip">${c}</span>`).join("")}</div>`;
+        } else if (t.kind === "quote") {
+          el.innerHTML = `<p>${t.text}</p><small>${t.who}</small>`;
+        }
+        el.addEventListener("click", () => {
+          board.querySelectorAll(".tile").forEach(x => x.classList.remove("selected"));
+          el.classList.add("selected");
+          openDrawer({ title: t.title, body: t.body, color: t.color || t.bar || palettes[mode].colors[0] });
+        });
+        board.appendChild(el);
+      });
+      renderPaletteDots();
+    }
+
+    function openDrawer({ title, body, color }) {
+      document.getElementById("dTitle").textContent = title;
+      document.getElementById("dBody").textContent = body;
+      document.getElementById("dSw").style.background = color;
+      drawer.classList.add("open");
+    }
+    document.getElementById("dClose").addEventListener("click", () => drawer.classList.remove("open"));
+
+    document.getElementById("btnShuffle").addEventListener("click", () => {
+      order = order.slice().sort(() => Math.random() - 0.5);
+      render();
+    });
+
+    function setMode(m, btn) {
+      mode = m;
+      document.querySelectorAll(".actions button").forEach(b => b.classList.remove("on"));
+      if (btn) btn.classList.add("on");
+      order = [];
+      render();
+    }
+    document.getElementById("btnWarm").addEventListener("click", (e) => setMode("warm", e.target));
+    document.getElementById("btnNight").addEventListener("click", (e) => setMode("night", e.target));
+    document.getElementById("btnPicnic").addEventListener("click", (e) => setMode("picnic", e.target));
+
+    render();
+  </script>
+</body>
+</html>

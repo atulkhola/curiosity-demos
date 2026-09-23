@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D Camera Captions — Curiosity</title>
+  <style>
+    :root {
+      --bg: #0c0a09;
+      --cream: #f5efe6;
+      --accent: #ff4d3a;
+      --ink: #1a1410;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--cream);
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; overflow: hidden; }
+    .stage {
+      position: relative; width: 100%; height: 100%;
+      perspective: 1200px; perspective-origin: 50% 45%;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% 40%, #2a1a14 0%, transparent 60%),
+        linear-gradient(180deg, #1a100c, #0c0a09);
+    }
+    .hud {
+      position: absolute; z-index: 20; left: 0; right: 0; top: 0;
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      padding: 14px 16px; font-family: ui-sans-serif, system-ui, sans-serif;
+      background: linear-gradient(180deg, rgba(0,0,0,0.55), transparent);
+    }
+    .hud h1 { margin: 0; font-size: 0.85rem; font-weight: 650; letter-spacing: -0.01em; flex: 1; min-width: 140px; }
+    .hud button, .hud select {
+      font: inherit; font-size: 12px; font-weight: 600;
+      border-radius: 999px; border: 1px solid rgba(245,239,230,0.25);
+      background: rgba(255,255,255,0.08); color: var(--cream);
+      padding: 7px 12px; cursor: pointer;
+    }
+    .hud button:hover, .hud button.active { border-color: var(--accent); background: rgba(255,77,58,0.2); }
+    .note {
+      position: absolute; z-index: 20; left: 16px; right: 16px; bottom: 16px;
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.72rem;
+      line-height: 1.4; color: rgba(245,239,230,0.65);
+      background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(8px);
+      max-width: 520px;
+    }
+    .note b { color: var(--cream); }
+    .note code { font-size: 0.68rem; opacity: 0.85; }
+
+    .world {
+      position: absolute; inset: 0;
+      transform-style: preserve-3d;
+      transform: translateZ(0);
+      will-change: transform;
+    }
+
+    .plate {
+      position: absolute; left: 50%; top: 42%;
+      width: min(280px, 62vw); height: min(360px, 58vh);
+      margin-left: calc(min(280px, 62vw) / -2);
+      margin-top: calc(min(360px, 58vh) / -2);
+      transform-style: preserve-3d;
+      transform: translateZ(0px);
+      border-radius: 18px; overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.55);
+      background:
+        linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.45)),
+        linear-gradient(145deg, #c97a5a, #8b3a2a 40%, #3d1f18);
+    }
+    .plate .face {
+      position: absolute; inset: 0;
+      display: grid; place-items: end center;
+      padding-bottom: 18%;
+    }
+    .avatar {
+      width: 72%; height: 78%;
+      border-radius: 50% 50% 42% 42% / 40% 40% 55% 55%;
+      background:
+        radial-gradient(circle at 45% 28%, #f2c4a8 0%, #d4896a 35%, #8b4a38 70%),
+        #8b4a38;
+      position: relative;
+      box-shadow: inset 0 -30px 40px rgba(0,0,0,0.25);
+    }
+    .avatar::before {
+      content: ""; position: absolute; left: 22%; top: 32%; width: 18%; height: 8%;
+      background: #2a1810; border-radius: 40%; opacity: 0.7;
+      box-shadow: 38px 0 0 #2a1810;
+    }
+    .avatar::after {
+      content: ""; position: absolute; left: 35%; top: 48%; width: 30%; height: 10%;
+      border-bottom: 3px solid #5a2a20; border-radius: 50%; opacity: 0.5;
+    }
+    .hair {
+      position: absolute; left: 8%; top: -8%; width: 84%; height: 42%;
+      background: linear-gradient(180deg, #c41e3a, #7a1020);
+      border-radius: 50% 50% 40% 40%;
+      box-shadow: 0 20px 0 -8px #9b1830;
+    }
+
+    .caption {
+      position: absolute; left: 50%; top: 50%;
+      transform-style: preserve-3d;
+      font-weight: 700; letter-spacing: -0.04em; line-height: 0.9;
+      white-space: nowrap; pointer-events: none;
+      text-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      will-change: transform, filter, opacity;
+    }
+    .caption.hero {
+      font-size: clamp(4.5rem, 18vw, 9rem);
+      color: #ffe566;
+      font-style: italic;
+      z-index: 1;
+    }
+    .caption.near {
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      color: var(--cream);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-weight: 600; font-style: normal; letter-spacing: -0.02em;
+    }
+    .caption.far {
+      font-size: clamp(1rem, 2.8vw, 1.5rem);
+      color: rgba(245,239,230,0.55);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-weight: 500; font-style: normal;
+    }
+    .caption.ring {
+      font-size: clamp(0.95rem, 2.5vw, 1.35rem);
+      color: var(--cream);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-weight: 650; letter-spacing: 0.02em;
+    }
+    .caption.behind {
+      z-index: 0;
+      /* head occlusion approx: middle letters dim via mask on plate overlay */
+    }
+
+    .matte-front {
+      position: absolute; left: 50%; top: 42%;
+      width: min(280px, 62vw); height: min(360px, 58vh);
+      margin-left: calc(min(280px, 62vw) / -2);
+      margin-top: calc(min(360px, 58vh) / -2);
+      transform: translateZ(2px);
+      pointer-events: none;
+      /* soft silhouette so hero text appears to tuck behind head */
+      -webkit-mask-image: radial-gradient(ellipse 55% 48% at 50% 42%, #000 42%, transparent 68%);
+      mask-image: radial-gradient(ellipse 55% 48% at 50% 42%, #000 42%, transparent 68%);
+      background: inherit;
+      overflow: hidden;
+      border-radius: 18px;
+    }
+    .matte-front .avatar-clone {
+      position: absolute; left: 14%; top: 8%; width: 72%; height: 78%;
+      border-radius: 50% 50% 42% 42% / 40% 40% 55% 55%;
+      background: radial-gradient(circle at 45% 28%, #f2c4a8 0%, #d4896a 35%, #8b4a38 70%);
+    }
+    .matte-front .hair-clone {
+      position: absolute; left: 8%; top: -2%; width: 84%; height: 42%;
+      background: linear-gradient(180deg, #c41e3a, #7a1020);
+      border-radius: 50% 50% 40% 40%;
+    }
+
+    .fps-badge {
+      position: absolute; top: 56px; right: 16px; z-index: 21;
+      font-family: ui-monospace, monospace; font-size: 11px;
+      color: rgba(245,239,230,0.5); padding: 4px 8px;
+      border-radius: 6px; background: rgba(0,0,0,0.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="hud">
+      <h1>3D camera + captions</h1>
+      <button type="button" id="btnPlay" class="active">Play</button>
+      <select id="shot" aria-label="Shot">
+        <option value="whip">Whip-in + hero</option>
+        <option value="truck">Parallax truck</option>
+        <option value="ring">Wrapped ring</option>
+        <option value="fly">Fly-through</option>
+        <option value="stair">Staircase finale</option>
+      </select>
+      <button type="button" id="btnStep">Step 15fps</button>
+    </div>
+    <div class="fps-badge" id="fps">15 fps · ghost blur</div>
+
+    <div class="world" id="world">
+      <!-- Depth captions (far → near). Plate at z≈0; behind text negative; front positive -->
+      <div class="caption far" data-d="2200" data-x="-28" data-y="-32" style="color:#c4b5a5">soft focus</div>
+      <div class="caption far" data-d="2000" data-x="32" data-y="28">in the cut</div>
+      <div class="caption near" data-d="1500" data-x="-34" data-y="18">say it</div>
+      <div class="caption near" data-d="1250" data-x="30" data-y="-22">out loud</div>
+
+      <div class="caption hero behind" data-d="3000" data-x="0" data-y="-8" data-hero="1">feel</div>
+
+      <div class="plate" id="plate">
+        <div class="face">
+          <div class="avatar"><div class="hair"></div></div>
+        </div>
+      </div>
+
+      <!-- Front matte clone so hero appears behind head -->
+      <div class="matte-front" id="matte">
+        <div class="avatar-clone"><div class="hair-clone"></div></div>
+      </div>
+
+      <div class="caption near" data-d="1100" data-x="-20" data-y="36" style="color:#ffb4a8">whip</div>
+      <div class="caption near" data-d="900" data-x="22" data-y="40" style="color:#ffe566">punch</div>
+
+      <!-- Ring words (positioned in JS) -->
+      <div id="ring"></div>
+    </div>
+
+    <div class="note">
+      <b>Browser approx</b> of HeyGen HyperFrames <code>camera-3d-captions</code> skill —
+      CSS 3D camera + depth groups + posterized 15 fps + ghost motion blur.
+      Real skill needs HyperFrames CLI, person matte, word clock, GSAP painter — can’t run that stack here.
+      Drag to orbit · pick a shot grammar beat above.
+    </div>
+  </div>
+
+  <script>
+    const world = document.getElementById("world");
+    const plate = document.getElementById("plate");
+    const matte = document.getElementById("matte");
+    const ringHost = document.getElementById("ring");
+    const STAGE_F = 1326; // skill lens constant (approx)
+
+    const ringWords = ["YOU", "ARE", "HERE", "NOW", "LIVE", "BOLD", "SOFT", "LOUD"];
+    ringWords.forEach((w, i) => {
+      const el = document.createElement("div");
+      el.className = "caption ring";
+      el.dataset.ring = String(i);
+      el.textContent = w;
+      ringHost.appendChild(el);
+    });
+
+    const caps = [...document.querySelectorAll(".caption")].filter(c => !c.closest("#ring") || c.dataset.ring !== undefined);
+    // include ring children
+    const allCaps = [...document.querySelectorAll(".caption")];
+
+    let cam = { x: 0, y: 0, z: 0, rx: 0, ry: 0, fov: 1 };
+    let drag = null;
+    let playing = true;
+    let t0 = performance.now();
+    let shot = "whip";
+    let stepMode = false;
+    let stepFrame = 0;
+
+    // Map depth D (skill units ~1000–3000) → translateZ px
+    function depthToZ(d) {
+      // plate ~3000 → 0; nearer captions → positive z toward camera
+      return (3000 - d) * 0.22;
+    }
+
+    function placeCaptions(time) {
+      const ghosts = stepMode ? 1 : 7;
+      allCaps.forEach((el) => {
+        if (el.dataset.ring !== undefined) return; // ring handled separately
+        const d = +el.dataset.d;
+        const bx = (+el.dataset.x || 0);
+        const by = (+el.dataset.y || 0);
+        const z = depthToZ(d);
+        const scale = 1500 / Math.max(400, d - cam.z * 2);
+        // entry rise
+        const rise = el.dataset.hero ? 140 : 30;
+        const entry = Math.min(1, time * 1.2);
+        const ey = (1 - easeOut(entry)) * rise;
+
+        // ghost motion blur: stack via text-shadow approximation + slight opacity trail
+        let blurGhosts = "";
+        if (!stepMode && ghosts > 1) {
+          for (let g = 1; g <= 3; g++) {
+            const o = 0.12 / g;
+            blurGhosts += `${g * 1.5}px 0 0 rgba(255,229,102,${o}),`;
+          }
+          blurGhosts = blurGhosts.slice(0, -1);
+        }
+
+        el.style.transform = `translate(-50%, -50%) translate3d(${bx}vw, calc(${by}vh - ${ey}px), ${z}px) scale(${scale})`;
+        if (el.dataset.hero) {
+          el.style.textShadow = blurGhosts || "0 12px 40px rgba(0,0,0,0.5)";
+          // DOF-ish
+          const focus = 1500;
+          const sigma = Math.min(4, 6.7 * Math.abs(d - focus) / d);
+          el.style.filter = sigma > 0.5 ? `blur(${sigma * 0.35}px)` : "none";
+        }
+      });
+
+      // Wrapped ring in front of speaker
+      const ringEls = [...ringHost.querySelectorAll(".caption")];
+      const R = 160;
+      const ringZ = depthToZ(2000);
+      const spin = time * 0.55;
+      ringEls.forEach((el, i) => {
+        const a = (i / ringEls.length) * Math.PI * 2 + spin;
+        const x = Math.sin(a) * R;
+        const y = Math.cos(a) * 28 - 10; // slight tilt from above ~11–16°
+        const z = ringZ + Math.cos(a) * 70;
+        const visible = Math.cos(a) > -0.15; // front-ish
+        const s = 0.75 + 0.35 * (Math.cos(a) * 0.5 + 0.5);
+        el.style.opacity = shot === "ring" || shot === "fly" ? (visible ? 0.95 : 0.25) : 0.15;
+        el.style.transform = `translate(-50%, -50%) translate3d(${x}px, ${y}px, ${z}px) rotateY(${(-a * 180 / Math.PI)}deg) scale(${s})`;
+        el.style.left = "50%";
+        el.style.top = "42%";
+      });
+    }
+
+    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+    function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+    function shotCamera(rawT) {
+      // posterize to 15 fps
+      const fps = 15;
+      const t = stepMode ? stepFrame / fps : Math.floor(rawT * fps) / fps;
+      const loop = t % 4.2;
+
+      if (shot === "whip") {
+        // camA-ish: punch from low then creep
+        const u = Math.min(1, loop / 1.2);
+        cam.z = -180 + easeOut(u) * 220;
+        cam.y = 40 * (1 - easeOut(u));
+        cam.ry = (1 - easeOut(u)) * -18;
+        cam.rx = (1 - easeOut(u)) * 8;
+        plate.style.transform = `translateZ(0) scale(${1.28 - easeOut(u) * 0.18})`;
+        matte.style.transform = `translateZ(2px) scale(${1.28 - easeOut(u) * 0.18})`;
+      } else if (shot === "truck") {
+        const u = easeInOut((loop % 3) / 3);
+        cam.x = -90 + u * 180;
+        cam.z = 40;
+        cam.ry = -12 + u * 24;
+        cam.rx = 2;
+        cam.y = 0;
+        plate.style.transform = "translateZ(0) scale(1.12)";
+        matte.style.transform = "translateZ(2px) scale(1.12)";
+      } else if (shot === "ring") {
+        cam.x = Math.sin(loop * 0.7) * 30;
+        cam.z = 60 + Math.sin(loop) * 20;
+        cam.ry = Math.sin(loop * 0.5) * 10;
+        cam.rx = 8;
+        cam.y = -10;
+        plate.style.transform = "translateZ(0) scale(1.08)";
+        matte.style.transform = "translateZ(2px) scale(1.08)";
+      } else if (shot === "fly") {
+        const u = (loop % 3.5) / 3.5;
+        cam.z = -80 + u * 280;
+        cam.y = Math.sin(u * Math.PI) * -30;
+        cam.ry = Math.sin(u * Math.PI * 2) * 16;
+        cam.rx = 4;
+        cam.x = Math.sin(u * Math.PI) * 40;
+        plate.style.transform = "translateZ(0) scale(1.05)";
+        matte.style.transform = "translateZ(2px) scale(1.05)";
+      } else {
+        // staircase
+        const u = easeInOut((loop % 3.2) / 3.2);
+        cam.z = -40 + u * 320;
+        cam.y = -20 + u * 50;
+        cam.rx = 12 - u * 6;
+        cam.ry = -8 + u * 16;
+        cam.x = -20 + u * 40;
+        plate.style.transform = `translateZ(0) scale(${1.2 - u * 0.25})`;
+        matte.style.transform = `translateZ(2px) scale(${1.2 - u * 0.25})`;
+      }
+
+      // user drag overlay
+      if (userOrbit.ry || userOrbit.rx) {
+        cam.ry += userOrbit.ry;
+        cam.rx += userOrbit.rx;
+      }
+
+      world.style.transform =
+        `translate3d(${cam.x}px, ${cam.y}px, ${cam.z}px) rotateX(${cam.rx}deg) rotateY(${cam.ry}deg)`;
+
+      placeCaptions(t);
+      return t;
+    }
+
+    const userOrbit = { rx: 0, ry: 0 };
+
+    let lastPaint = 0;
+    function frame(now) {
+      const rawT = (now - t0) / 1000;
+      if (playing || stepMode) {
+        // paint at ~30 but content snaps to 15
+        if (!stepMode || now - lastPaint > 66) {
+          shotCamera(rawT);
+          lastPaint = now;
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    document.getElementById("btnPlay").addEventListener("click", (e) => {
+      playing = !playing;
+      stepMode = false;
+      e.target.classList.toggle("active", playing);
+      e.target.textContent = playing ? "Play" : "Paused";
+      if (playing) t0 = performance.now() - stepFrame / 15 * 1000;
+    });
+    document.getElementById("btnStep").addEventListener("click", () => {
+      playing = false;
+      stepMode = true;
+      stepFrame++;
+      document.getElementById("btnPlay").classList.remove("active");
+      document.getElementById("btnPlay").textContent = "Paused";
+      shotCamera(stepFrame / 15);
+    });
+    document.getElementById("shot").addEventListener("change", (e) => {
+      shot = e.target.value;
+      t0 = performance.now();
+      stepFrame = 0;
+    });
+
+    const stage = document.getElementById("stage");
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".hud") || e.target.closest(".note")) return;
+      drag = { x: e.clientX, y: e.clientY, ry: userOrbit.ry, rx: userOrbit.rx };
+      stage.setPointerCapture(e.pointerId);
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      userOrbit.ry = drag.ry + (e.clientX - drag.x) * 0.15;
+      userOrbit.rx = Math.max(-25, Math.min(25, drag.rx - (e.clientY - drag.y) * 0.12));
+    });
+    stage.addEventListener("pointerup", () => { drag = null; });
+    stage.addEventListener("pointercancel", () => { drag = null; });
+  </script>
+</body>
+</html>
