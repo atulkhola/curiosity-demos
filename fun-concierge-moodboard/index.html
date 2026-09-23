@@ -222,8 +222,7 @@
     const palettes = {
       warm: {
         name: "Warm concierge",
-        colors: ["#ff6b4a","#ffd56a","#7ddecac".replace(" ",""),"#c4a1ff","#7ec8ff","#fff6ea","#2a1810"],
-        // fix mint typo
+        colors: ["#ff6b4a","#ffd56a","#7ddeca","#c4a1ff","#7ec8ff","#fff6ea","#2a1810"],
       },
       night: {
         name: "Night club",
@@ -234,9 +233,6 @@
         colors: ["#8fbc5a","#ffd56a","#ff6b4a","#7ec8ff","#fff6ea","#5a3a28","#f4a261"]
       }
     };
-    // correct mint
-    palettes.warm.colors[2] = "#7ddeca";
-
     const photoGrad = (a, b, c) =>
       `linear-gradient(145deg, ${a}, ${b} 45%, ${c})`;
 
