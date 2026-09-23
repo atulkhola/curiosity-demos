@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AgentIndex brand deck · Curiosity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --lime: #D0FF78;
+      --cerulean: #24C7D6;
+      --aqua: #10B6CB;
+      --ocean: #015473;
+      --carbon: #002845;
+      --black: #05080c;
+      --ink: #e8eaed;
+      --muted: #8b949e;
+      --panel: #12161c;
+      --border: #252b34;
+      --serif: "Instrument Serif", "Times New Roman", Georgia, serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      min-height: 100vh;
+      background: var(--black);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+    .grain {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      opacity: 0.07;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      mix-blend-mode: overlay;
+    }
+    header {
+      max-width: 920px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.1rem 1.15rem 0.55rem;
+      position: relative;
+      z-index: 2;
+    }
+    header h1 {
+      font-size: 1.15rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+    header .sub {
+      margin-top: 0.25rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.4;
+      max-width: 56ch;
+    }
+    .controls {
+      max-width: 920px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0.55rem 1.15rem 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: flex-end;
+      position: relative;
+      z-index: 2;
+    }
+    .controls label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.28rem;
+      font-size: 0.65rem;
+      font-weight: 650;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex: 1 1 140px;
+    }
+    .controls input {
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--ink);
+      background: #0e1218;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.55rem 0.7rem;
+    }
+    .controls button {
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 10px;
+      padding: 0.6rem 0.95rem;
+      font-weight: 650;
+      font-size: 0.82rem;
+      border: 1px solid var(--border);
+      background: #1a222c;
+      color: var(--ink);
+      height: 2.45rem;
+    }
+    .controls button:hover { border-color: var(--cerulean); }
+    .stage-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.4rem 1rem 1.25rem;
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+    .deck {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      max-height: min(62vh, 520px);
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+      background: var(--carbon);
+      box-shadow:
+        0 0 0 1px rgba(36, 199, 214, 0.18),
+        0 0 40px rgba(36, 199, 214, 0.12),
+        0 0 80px rgba(208, 255, 120, 0.06),
+        0 24px 60px rgba(0,0,0,0.55);
+      touch-action: pan-y;
+      user-select: none;
+    }
+    @media (max-width: 640px) {
+      .deck { aspect-ratio: 4 / 5; max-height: 58vh; }
+    }
+    .slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s var(--ease), transform 0.45s var(--ease);
+      transform: scale(1.02);
+      overflow: hidden;
+    }
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+    .slide-grain {
+      position: absolute;
+      inset: 0;
+      opacity: 0.18;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+      pointer-events: none;
+    }
+
+    /* —— Mark (4-node geometric) —— */
+    .mark {
+      width: 1em;
+      height: 1em;
+      display: inline-block;
+      position: relative;
+    }
+    .mark svg { width: 100%; height: 100%; display: block; }
+
+    /* —— Slide 1: Logo —— */
+    .s1 {
+      background: #020406;
+      display: grid;
+      place-items: center;
+    }
+    .s1 .glow-frame {
+      position: absolute;
+      inset: 8%;
+      border-radius: 12px;
+      box-shadow:
+        inset 0 0 40px rgba(36, 199, 214, 0.25),
+        inset 0 0 80px rgba(208, 255, 120, 0.08),
+        0 0 60px rgba(36, 199, 214, 0.35),
+        0 0 100px rgba(208, 255, 120, 0.15);
+      border: 1px solid rgba(36, 199, 214, 0.35);
+      background:
+        radial-gradient(ellipse at 20% 80%, rgba(36,199,214,0.15), transparent 50%),
+        radial-gradient(ellipse at 85% 15%, rgba(208,255,120,0.12), transparent 45%);
+    }
+    .s1 .logo-lockup {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 0.55em;
+      color: #fff;
+      font-family: var(--serif);
+      font-size: clamp(1.8rem, 6.5vw, 3.4rem);
+      letter-spacing: -0.02em;
+    }
+    .s1 .logo-lockup .mark { font-size: 0.95em; color: #fff; }
+
+    /* —— Slide 2: Positioning —— */
+    .s2 {
+      background:
+        radial-gradient(ellipse at 30% 40%, #10B6CB 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, #015473 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 20%, #24C7D6 0%, transparent 40%),
+        linear-gradient(135deg, #002845, #024a5c 40%, #0a7a88);
+      filter: none;
+      display: grid;
+      place-items: center;
+      padding: 8%;
+    }
+    .s2::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 25% 70%, rgba(208,255,120,0.2), transparent 40%),
+        radial-gradient(circle at 80% 30%, rgba(36,199,214,0.35), transparent 45%);
+      filter: blur(28px);
+      transform: scale(1.15);
+    }
+    .s2 .pills {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      align-items: flex-start;
+      max-width: 90%;
+    }
+    .s2 .pill {
+      background: var(--lime);
+      color: var(--carbon);
+      font-family: var(--serif);
+      font-size: clamp(1.35rem, 5.2vw, 2.65rem);
+      line-height: 1.05;
+      padding: 0.35em 0.7em 0.4em;
+      border-radius: 999px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+      white-space: nowrap;
+    }
+    .s2 .pill:nth-child(2) { margin-left: 8%; }
+    .s2 .pill:nth-child(3) { margin-left: 16%; }
+    .s2 .corner-word {
+      position: absolute;
+      left: 6%;
+      bottom: 7%;
+      z-index: 2;
+      font-family: var(--serif);
+      font-size: clamp(0.7rem, 2vw, 1rem);
+      color: rgba(255,255,255,0.9);
+      letter-spacing: 0.01em;
+    }
+    .s2 .corner-mark {
+      position: absolute;
+      right: 7%;
+      top: 8%;
+      z-index: 2;
+      font-size: clamp(1.2rem, 3.5vw, 1.8rem);
+      color: rgba(255,255,255,0.85);
+    }
+
+    /* —— Slide 3: Stationery —— */
+    .s3 {
+      background: #06090d;
+      display: grid;
+      place-items: center;
+      padding: 7%;
+    }
+    .s3 .comp {
+      position: relative;
+      width: min(88%, 520px);
+      aspect-ratio: 5 / 3.4;
+    }
+    .s3 .photo-strip {
+      position: absolute;
+      left: 0; right: 8%; top: 8%;
+      height: 42%;
+      border-radius: 4px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(2,40,60,0.2), rgba(0,20,40,0.55)),
+        radial-gradient(ellipse at 40% 60%, #24C7D6 0%, transparent 55%),
+        linear-gradient(105deg, #015473 0%, #0a6a7a 35%, #1a4a5a 55%, #0d3040 100%);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    .s3 .photo-strip::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 70% 40%, rgba(208,255,120,0.15), transparent 40%),
+        repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 41px);
+      opacity: 0.9;
+    }
+    .s3 .white-card {
+      position: absolute;
+      right: 0; bottom: 12%;
+      width: 62%;
+      background: #f4f6f5;
+      color: #0a1520;
+      border-radius: 6px;
+      padding: 1rem 1.1rem 1.15rem;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+      z-index: 2;
+    }
+    .s3 .white-card .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.85rem;
+      font-family: var(--serif);
+      font-size: clamp(0.75rem, 2vw, 1rem);
+    }
+    .s3 .white-card .url {
+      font-family: var(--sans);
+      font-size: 0.55em;
+      opacity: 0.55;
+      letter-spacing: 0.02em;
+    }
+    .s3 .white-card .line {
+      font-family: var(--serif);
+      font-size: clamp(0.85rem, 2.4vw, 1.25rem);
+      line-height: 1.25;
+      max-width: 18ch;
+    }
+    .s3 .logo-tile {
+      position: absolute;
+      left: 0; bottom: 0;
+      width: clamp(52px, 14%, 72px);
+      aspect-ratio: 1;
+      background: #fff;
+      border-radius: 4px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      z-index: 3;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      color: #0a1520;
+    }
+
+    /* —— Slide 4: Product mockups —— */
+    .s4 {
+      background: var(--carbon);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(0.75rem, 3vw, 1.75rem);
+      padding: 6%;
+    }
+    .s4 .phone {
+      width: min(32%, 160px);
+      aspect-ratio: 9 / 16;
+      border-radius: 18px;
+      background: #0a1218;
+      border: 2px solid #1a2830;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .s4 .phone-face {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 35%, rgba(208,255,120,0.55) 0%, transparent 45%),
+        radial-gradient(ellipse at 40% 55%, rgba(36,199,214,0.45) 0%, transparent 50%),
+        linear-gradient(180deg, #0a3040, #051018);
+      filter: blur(0.5px);
+    }
+    .s4 .phone-face::after {
+      content: "";
+      position: absolute;
+      left: 20%; right: 20%; top: 18%; bottom: 35%;
+      border-radius: 50% 50% 45% 45%;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(208,255,120,0.7), transparent 60%),
+        radial-gradient(ellipse at 30% 60%, rgba(16,182,203,0.5), transparent 50%);
+      filter: blur(8px);
+      opacity: 0.9;
+    }
+    .s4 .phone-copy {
+      position: absolute;
+      left: 10%; right: 10%; bottom: 12%;
+      font-family: var(--serif);
+      font-size: clamp(0.55rem, 1.6vw, 0.78rem);
+      line-height: 1.25;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+    .s4 .browser {
+      flex: 1;
+      max-width: 380px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #0e1620;
+      border: 1px solid #1e2c38;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+    }
+    .s4 .chrome {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.65rem;
+      background: #121c26;
+      border-bottom: 1px solid #1e2c38;
+    }
+    .s4 .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #3a4a55;
+    }
+    .s4 .dot:nth-child(1) { background: #ff5f57; }
+    .s4 .dot:nth-child(2) { background: #febc2e; }
+    .s4 .dot:nth-child(3) { background: #28c840; }
+    .s4 .urlbar {
+      flex: 1;
+      margin-left: 0.4rem;
+      height: 16px;
+      border-radius: 4px;
+      background: #0a1218;
+      font-size: 0.55rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      padding: 0 0.45rem;
+      overflow: hidden;
+    }
+    .s4 .hero-banner {
+      height: 42%;
+      min-height: 70px;
+      background:
+        linear-gradient(180deg, rgba(0,20,40,0.15), rgba(0,20,40,0.55)),
+        radial-gradient(ellipse at 60% 50%, #24C7D6, transparent 55%),
+        linear-gradient(120deg, #015473, #0d5a6a 40%, #1a4050);
+      position: relative;
+    }
+    .s4 .browser-body {
+      padding: 0.85rem 1rem 1rem;
+      position: relative;
+    }
+    .s4 .browser-body h3 {
+      font-family: var(--serif);
+      font-size: clamp(0.85rem, 2.2vw, 1.15rem);
+      font-weight: 400;
+      line-height: 1.25;
+      max-width: 22ch;
+      margin-bottom: 0.75rem;
+    }
+    .s4 .cta {
+      display: inline-block;
+      background: var(--lime);
+      color: var(--carbon);
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 0.45em 0.9em;
+      border-radius: 6px;
+      border: none;
+      cursor: default;
+    }
+    .s4 .browser-mark {
+      position: absolute;
+      right: 0.85rem;
+      bottom: 0.75rem;
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.35);
+    }
+
+    /* —— Slide 5: Palette —— */
+    .s5 {
+      display: flex;
+      background: #0a0e12;
+    }
+    .s5 .swatch {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 1.1rem 0.55rem 1rem;
+      min-width: 0;
+      position: relative;
+    }
+    .s5 .swatch:first-child { flex: 1.35; }
+    .s5 .swatch .name {
+      font-size: clamp(0.55rem, 1.5vw, 0.78rem);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+      writing-mode: horizontal-tb;
+    }
+    .s5 .swatch .hex {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: clamp(0.5rem, 1.35vw, 0.72rem);
+      opacity: 0.9;
+      letter-spacing: 0.02em;
+    }
+    .s5 .swatch.light { color: var(--carbon); }
+    .s5 .swatch.dark { color: #fff; }
+
+    /* —— Slide 6: Dock —— */
+    .s6 {
+      background:
+        radial-gradient(ellipse at 40% 50%, #24C7D6 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 40%, #D0FF78 0%, transparent 45%),
+        linear-gradient(145deg, #015473, #0a8a98 50%, #1a6a5a);
+      display: grid;
+      place-items: center;
+      padding: 8%;
+    }
+    .s6::before {
+      content: "";
+      position: absolute;
+      inset: -10%;
+      background:
+        radial-gradient(circle at 30% 60%, rgba(208,255,120,0.35), transparent 40%),
+        radial-gradient(circle at 75% 35%, rgba(36,199,214,0.4), transparent 45%);
+      filter: blur(40px);
+    }
+    .dock {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.85rem 1.15rem;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.18);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255,255,255,0.35);
+      box-shadow:
+        0 8px 32px rgba(0,0,0,0.25),
+        inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    .dock-icon {
+      width: clamp(52px, 12vw, 68px);
+      height: clamp(52px, 12vw, 68px);
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      overflow: hidden;
+      position: relative;
+    }
+    .dock-icon.mail {
+      background: linear-gradient(160deg, #5eb8ff, #2a7de0);
+    }
+    .dock-icon.mail svg { width: 55%; height: 55%; }
+    .dock-icon.brand {
+      background: #0a1218;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      color: var(--cerulean);
+    }
+    .dock-icon.cal {
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
+    .dock-icon.cal .cal-head {
+      
+      background: #e4453a;
+      color: #fff;
+      font-size: clamp(0.45rem, 1.2vw, 0.6rem);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-align: center;
+      padding: 0.28em 0;
+      width: 100%;
+    }
+    .dock-icon.cal .cal-day {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      font-size: clamp(1.2rem, 3.5vw, 1.65rem);
+      font-weight: 700;
+      color: #1a1a1a;
+      line-height: 1;
+    }
+
+    /* —— Nav —— */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-top: 0.95rem;
+      position: relative;
+      z-index: 2;
+    }
+    .nav button.arrow {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: #151a21;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 1rem;
+      display: grid;
+      place-items: center;
+      line-height: 1;
+    }
+    .nav button.arrow:hover { border-color: var(--cerulean); color: var(--lime); }
+    .dots { display: flex; gap: 0.4rem; }
+    .dots button {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      border: none;
+      background: #2a3038;
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .dots button.active {
+      background: var(--lime);
+      transform: scale(1.25);
+    }
+    .slide-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      min-width: 7rem;
+      text-align: center;
+    }
+    footer {
+      max-width: 920px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0.5rem 1.15rem 1.5rem;
+      font-size: 0.7rem;
+      color: var(--muted);
+      line-height: 1.5;
+      position: relative;
+      z-index: 2;
+    }
+    footer a { color: var(--cerulean); }
+    footer .stack {
+      margin-top: 0.45rem;
+      opacity: 0.85;
+    }
+    footer code {
+      font-size: 0.65rem;
+      background: #151a21;
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <header>
+    <h1>AgentIndex brand deck</h1>
+    <p class="sub">Interactive first-pass of a 6-panel identity sheet — grain, cyan rim light, lime pills, glass dock. Inspired by @yahyavision’s Opus brand presentation toy.</p>
+  </header>
+  <div class="controls">
+    <label>Brand name
+      <input type="text" id="brand" value="AgentIndex" maxlength="28" autocomplete="off" />
+    </label>
+    <label>Tagline
+      <input type="text" id="tagline" value="Every AI Agent, One Index" maxlength="48" autocomplete="off" />
+    </label>
+    <button type="button" id="reset" class="ghost">Reset</button>
+  </div>
+  <div class="stage-wrap">
+    <div class="deck" id="deck" role="region" aria-label="Brand presentation slides">
+      <!-- 1 Logo -->
+      <div class="slide s1 active" data-i="0" data-label="Logo">
+        <div class="glow-frame"></div>
+        <div class="logo-lockup">
+          <span class="mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><circle cx="16" cy="16" r="7" fill="currentColor"/><circle cx="48" cy="16" r="7" fill="currentColor"/><circle cx="16" cy="48" r="7" fill="currentColor"/><circle cx="48" cy="48" r="7" fill="currentColor"/><path d="M23 16h18M16 23v18M48 23v18M23 48h18" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></span>
+          <span class="word" data-brand>AgentIndex</span>
+        </div>
+        <div class="slide-grain"></div>
+      </div>
+      <!-- 2 Positioning -->
+      <div class="slide s2" data-i="1" data-label="Positioning">
+        <div class="corner-mark mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><circle cx="16" cy="16" r="7" fill="currentColor"/><circle cx="48" cy="16" r="7" fill="currentColor"/><circle cx="16" cy="48" r="7" fill="currentColor"/><circle cx="48" cy="48" r="7" fill="currentColor"/><path d="M23 16h18M16 23v18M48 23v18M23 48h18" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></div>
+        <div class="pills" id="pills">
+          <div class="pill">Every</div>
+          <div class="pill">AI Agent,</div>
+          <div class="pill">One Index</div>
+        </div>
+        <div class="corner-word" data-brand>AgentIndex</div>
+        <div class="slide-grain"></div>
+      </div>
+      <!-- 3 Stationery -->
+      <div class="slide s3" data-i="2" data-label="Stationery">
+        <div class="comp">
+          <div class="photo-strip"></div>
+          <div class="white-card">
+            <div class="top">
+              <span data-brand>AgentIndex</span>
+              <span class="url">www.agentindex.io</span>
+            </div>
+            <div class="line" data-pos>AgentIndex is a search engine for AI agents.</div>
+          </div>
+          <div class="logo-tile">
+            <span class="mark"><svg viewBox="0 0 64 64" fill="none"><circle cx="16" cy="16" r="7" fill="currentColor"/><circle cx="48" cy="16" r="7" fill="currentColor"/><circle cx="16" cy="48" r="7" fill="currentColor"/><circle cx="48" cy="48" r="7" fill="currentColor"/><path d="M23 16h18M16 23v18M48 23v18M23 48h18" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></span>
+          </div>
+        </div>
+        <div class="slide-grain"></div>
+      </div>
+      <!-- 4 Product -->
+      <div class="slide s4" data-i="3" data-label="Product">
+        <div class="phone">
+          <div class="phone-face"></div>
+          <div class="phone-copy"><span data-brand>AgentIndex</span> is where AI agents get discovered.</div>
+        </div>
+        <div class="browser">
+          <div class="chrome">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <div class="urlbar">agentindex.io</div>
+          </div>
+          <div class="hero-banner"></div>
+          <div class="browser-body">
+            <h3 data-pos>AgentIndex is a search engine for AI agents.</h3>
+            <span class="cta">Launch app</span>
+            <span class="browser-mark mark"><svg viewBox="0 0 64 64" fill="none"><circle cx="16" cy="16" r="7" fill="currentColor"/><circle cx="48" cy="16" r="7" fill="currentColor"/><circle cx="16" cy="48" r="7" fill="currentColor"/><circle cx="48" cy="48" r="7" fill="currentColor"/><path d="M23 16h18M16 23v18M48 23v18M23 48h18" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></span>
+          </div>
+        </div>
+        <div class="slide-grain"></div>
+      </div>
+      <!-- 5 Palette -->
+      <div class="slide s5" data-i="4" data-label="Palette">
+        <div class="swatch light" style="background:#D0FF78"><span class="name">Electric Lime</span><span class="hex">#D0FF78</span></div>
+        <div class="swatch dark" style="background:#24C7D6"><span class="name">Cerulean Blue</span><span class="hex">#24C7D6</span></div>
+        <div class="swatch dark" style="background:#10B6CB"><span class="name">Aqua Mist</span><span class="hex">#10B6CB</span></div>
+        <div class="swatch dark" style="background:#015473"><span class="name">Ocean Blue</span><span class="hex">#015473</span></div>
+        <div class="swatch dark" style="background:#002845"><span class="name">Carbon Black</span><span class="hex">#002845</span></div>
+      </div>
+      <!-- 6 Dock -->
+      <div class="slide s6" data-i="5" data-label="Dock">
+        <div class="dock">
+          <div class="dock-icon mail" aria-label="Mail">
+            <svg viewBox="0 0 48 48" fill="none"><rect x="6" y="12" width="36" height="24" rx="3" fill="#fff" fill-opacity="0.95"/><path d="M8 14l16 12L40 14" stroke="#2a7de0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="dock-icon brand" aria-label="AgentIndex">
+            <span class="mark"><svg viewBox="0 0 64 64" fill="none"><circle cx="16" cy="16" r="7" fill="#24C7D6"/><circle cx="48" cy="16" r="7" fill="#D0FF78"/><circle cx="16" cy="48" r="7" fill="#10B6CB"/><circle cx="48" cy="48" r="7" fill="#24C7D6"/><path d="M23 16h18M16 23v18M48 23v18M23 48h18" stroke="#D0FF78" stroke-width="5" stroke-linecap="round"/></svg></span>
+          </div>
+          <div class="dock-icon cal" aria-label="Calendar">
+            <div class="cal-head">MON</div>
+            <div class="cal-day">22</div>
+          </div>
+        </div>
+        <div class="slide-grain"></div>
+      </div>
+    </div>
+    <div class="nav">
+      <button type="button" class="arrow" id="prev" aria-label="Previous slide">←</button>
+      <div class="dots" id="dots"></div>
+      <button type="button" class="arrow" id="next" aria-label="Next slide">→</button>
+      <span class="slide-label" id="label">Logo</span>
+    </div>
+  </div>
+  <footer>
+    Inspired by <a href="https://x.com/yahyavision" target="_blank" rel="noopener">@yahyavision</a> X bookmark (AgentIndex / Opus brand presentation). First-pass Curiosity toy — not the original artwork; no claim Opus generated this live.
+    <div class="stack">Stack: LLM brand system (multi-panel identity) · 3×2 → interactive slides · grain + cyan rim + lime pills + tech-serif + glass dock · named palette <code>#D0FF78 #24C7D6 #10B6CB #015473 #002845</code></div>
+  </footer>
+  <script>
+    (function () {
+      const slides = [...document.querySelectorAll(".slide")];
+      const dotsEl = document.getElementById("dots");
+      const label = document.getElementById("label");
+      const brandIn = document.getElementById("brand");
+      const tagIn = document.getElementById("tagline");
+      const DEFAULTS = { brand: "AgentIndex", tagline: "Every AI Agent, One Index" };
+      let i = 0;
+
+      slides.forEach((_, idx) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("aria-label", "Go to slide " + (idx + 1));
+        b.addEventListener("click", () => go(idx));
+        dotsEl.appendChild(b);
+      });
+      const dots = [...dotsEl.children];
+
+      function go(n) {
+        i = (n + slides.length) % slides.length;
+        slides.forEach((s, j) => s.classList.toggle("active", j === i));
+        dots.forEach((d, j) => d.classList.toggle("active", j === i));
+        label.textContent = slides[i].dataset.label || ("Slide " + (i + 1));
+      }
+
+      document.getElementById("prev").addEventListener("click", () => go(i - 1));
+      document.getElementById("next").addEventListener("click", () => go(i + 1));
+
+      window.addEventListener("keydown", (e) => {
+        if (e.target.matches("input, textarea")) return;
+        if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); go(i + 1); }
+        if (e.key === "ArrowLeft") { e.preventDefault(); go(i - 1); }
+      });
+
+      // Swipe
+      const deck = document.getElementById("deck");
+      let tx = null;
+      deck.addEventListener("touchstart", (e) => { tx = e.changedTouches[0].screenX; }, { passive: true });
+      deck.addEventListener("touchend", (e) => {
+        if (tx == null) return;
+        const dx = e.changedTouches[0].screenX - tx;
+        if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1));
+        tx = null;
+      }, { passive: true });
+
+      function splitTagline(t) {
+        const parts = t.split(/,\s*/);
+        if (parts.length >= 3) return parts.slice(0, 3);
+        const words = t.trim().split(/\s+/);
+        if (words.length <= 3) return words.length ? words : ["Every", "AI Agent,", "One Index"];
+        // Try "Every / AI Agent, / One Index" style
+        if (/every/i.test(words[0]) && words.length >= 4) {
+          return [words[0], words.slice(1, -2).join(" ") + (/,/.test(t) ? "," : ""), words.slice(-2).join(" ")];
+        }
+        const a = Math.ceil(words.length / 3);
+        return [words.slice(0, a).join(" "), words.slice(a, 2 * a).join(" "), words.slice(2 * a).join(" ")];
+      }
+
+      function apply() {
+        const brand = brandIn.value.trim() || DEFAULTS.brand;
+        const tag = tagIn.value.trim() || DEFAULTS.tagline;
+        document.querySelectorAll("[data-brand]").forEach((el) => { el.textContent = brand; });
+        const pills = document.getElementById("pills");
+        const thirds = splitTagline(tag);
+        pills.innerHTML = thirds.map((p) => '<div class="pill">' + escapeHtml(p) + "</div>").join("");
+        const pos = brand + " is a search engine for AI agents.";
+        document.querySelectorAll("[data-pos]").forEach((el) => { el.textContent = pos; });
+      }
+
+      function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+
+      brandIn.addEventListener("input", apply);
+      tagIn.addEventListener("input", apply);
+      document.getElementById("reset").addEventListener("click", () => {
+        brandIn.value = DEFAULTS.brand;
+        tagIn.value = DEFAULTS.tagline;
+        apply();
+        go(0);
+      });
+
+      apply();
+      go(0);
+    })();
+  </script>
+</body>
+</html>
